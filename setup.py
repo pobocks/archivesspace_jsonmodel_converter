@@ -20,7 +20,7 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    entry_points={"console_scripts": ["convert=archivesspace_jsonmodel_converter:main"]},
+    entry_points={"console_scripts": ["ajc=archivesspace_jsonmodel_converter:main"]},
     install_requires=[
         "click>=8.1.3,<9",
         "structlog>=21.1.0,<22",

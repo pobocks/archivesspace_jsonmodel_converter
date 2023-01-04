@@ -1,7 +1,12 @@
 import click
 from .logger import get_logger
-@click.command()
+
+@click.group()
 def main():
-    log = get_logger('main')
-    log.info("Running main entry point", extra_var="added some stuff")
-    print("Hello, world!")
+    pass
+
+@main.command()
+def create_subjects():
+    log = get_logger('main.subjects')
+    log.info("Subject creation goes here")
+    print("Create some subjects already!")
