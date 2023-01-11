@@ -1,5 +1,15 @@
 # ArchivesSpace JSONModel Converter
 
+## Installation
+
+Navigate to the top level of this repository, and run:
+
+```bash
+pip install -e .
+```
+
+After installation, the tool should be available as `ajc`, running `ajc` will emit a help page describing any extant subcommands.
+
 ## Conversion of Access DB to postgresql DB
 
 For various reasons, it's more convenient to move the data from access to another data format before trying to convert it to ASpace JSONModel objects.  For this example, we will convert the data to a postgresql-compatible SQL file.  Additionally, we will deal with some issues specific to the Fort Lewis DB but that will commonly occur when converting data from MDB format.
