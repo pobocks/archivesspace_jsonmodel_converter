@@ -83,7 +83,7 @@ class CrosswalkReader:
     def add(self, orig_id, value, aspace_id):
         ''' add a hash to the list of crosses '''
         if orig_id in self.crosses:
-            raise Exception("This id ({}) already has been defined as {}".format(orig_id, pretty(orig_id)))
+            raise Exception("This id ({}) already has been defined as {}".format(orig_id, self.pretty(orig_id)))
         self.crosses[orig_id] = {
             'orig_id': orig_id,
             'value': value.strip(),
