@@ -16,6 +16,10 @@ client.authorize()
 #need from tblLcshs and tblGeoPlaces
 pattern =  "\|([a-z])"
 
+# HARDCODED DICTIONARY for LCSH subfields
+SUBFIELD_DICT = {"a": "topical", "b": "topical", "c" : "geographic", "d": "temporal", "v": "genre_form", "x": "topical", "y": "temporal", "z": "geographic"} 
+
+
 def config(filename='database.ini', section='postgresql'):
 	# create a parser
 	parser = ConfigParser()
@@ -52,37 +56,6 @@ def get_connection():
 			
 	return conn
 
-def connect():
-	""" Connect to the PostgreSQL database server """
-	conn = None
-	try:
-		# read connection parameters
-		params = config()
-
-		# connect to the PostgreSQL server
-		print('Connecting to the PostgreSQL database...')
-		conn = psycopg.connect(**params)
-		
-		# create a cursor
-		cur = conn.cursor()
-		
-	# execute a statement
-		print('PostgreSQL database version:')
-		cur.execute('SELECT version()')
-
-		# display the PostgreSQL database server version
-		db_version = cur.fetchone()
-		print(db_version)
-		
-	# close the communication with the PostgreSQL
-		cur.close()
-	except (Exception, psycopg.DatabaseError) as error:
-		print(error)
-	finally:
-		if conn is not None:
-			conn.close()
-			print('Database connection closed.')
-
 def add_to_aspace(orig_id, subject):
 	''' Add a subject to ArchivesSpace'''
 	new_id = None
@@ -106,24 +79,22 @@ def add_to_aspace(orig_id, subject):
 		print("Item {} not created for unknown reasons: {}".format(orig_id, response))	
 	return new_id
 
-def create_terms(subject):
+def create_terms(subject,firstfield):
 	'''creates a list of terms in jsonmodel format'''
-	subfield_dict = {"a": "topical", "b": "topical", "c" : "geographic", "d": "temporal", "v": "genre_form", "x": "topical", "y": "temporal", "z": "geographic"} # HARDCODED DICTIONARY.
 	trmlist = re.split(pattern,subject)
-	trmlist.insert(0, 'a')  # we're assuming the first entry is 'topical'
+	trmlist.insert(0, firstfield)  # the first subfield indicator is passed through
 	term_dict  = map(lambda i: (trmlist[i], trmlist[i+1]), range(len(trmlist)-1)[::2])
 	terms = []
 	for sub,term in term_dict:
 		try:
-			entry = JM.term(vocabulary="/vocabularies/1", term_type=subfield_dict[sub], term= term)
+			entry = JM.term(vocabulary="/vocabularies/1", term_type=SUBFIELD_DICT[sub], term= term)
 			terms.append(entry)
 		except Exception as e:
 			raise e
 	return terms
 
-
-def create_subject_json(orig_subj):
-	terms = create_terms(orig_subj)
+def create_subject_json(orig_subj, firstfield):
+	terms = create_terms(orig_subj, firstfield)
 	subject = JM.subject(publish="true", source="lcsh",vocabulary="/vocabularies/1", terms=terms)
 	return subject
 
@@ -134,6 +105,7 @@ def process_lcshs(xwalk_file_path):
 	conn = get_connection()
 	if conn is None:
 		return None
+	print("Processing LCSHS")
 	try:
 		# create a cursor
 		cur = conn.cursor()
@@ -145,7 +117,7 @@ def process_lcshs(xwalk_file_path):
 			orig_id = row[0]
 			orig_val = row[1]
 			try:
-				subject = create_subject_json(orig_val)
+				subject = create_subject_json(orig_val, 'a')
 				new_id = add_to_aspace(orig_id, subject)
 				if new_id is not None:
 					lcshs_xw.add(orig_id, orig_val, new_id)
@@ -163,7 +135,44 @@ def process_lcshs(xwalk_file_path):
 		clean_up(conn)
 		lcshs_xw.write_out()
 
+def process_geoplaces(xwalk_file_path):
+	''' Take the GeoPlaces values and add them to ArchivesSpace '''
+	# create a crosswalk csv
+	geo_xw = xw.CrosswalkReader('GEOPLACES',xwalk_file_path, True)
+	conn = get_connection()
+	if conn is None:
+		return None
+	print("***** Processing GEOPLACES")
+	try:
+		# create a cursor
+		cur = conn.cursor()
+		cur.execute('SELECT * from tblGeoPlaces')
+		while True:
+			row = cur.fetchone()
+			if row == None or len(row) < 2:
+				break
+			orig_id = row[0]
+			orig_val = row[1]
+			try:
+				subject = create_subject_json(orig_val, 'c')
+				new_id = add_to_aspace(orig_id, subject)
+				if new_id is not None:
+					geo_xw.add(orig_id, orig_val, new_id)
+				#TBD: what do we do with None new_ids?
+				else:
+					print("{} '{}' was not converted".format(orig_id, orig_val))
+			except Exception as e:
+				print("Exception '{}' triggered on {} '{}', which will not be converted".format(e, orig_id, orig_val))
+			finally:
+				continue
+	except Exception as e:
+		print(e)
+		print(sys.exc_info()[2])
+	finally:
+		clean_up(conn)
+		geo_xw.write_out()
 
 if __name__ == '__main__':
 	#connect()
 	process_lcshs('c:/Users/rlynn/aspacelinux/temp/lcshs.csv')
+	process_geoplaces('c:/Users/rlynn/aspacelinux/temp/geoplaces.csv')
