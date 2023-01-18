@@ -5,7 +5,7 @@ from .configurator import AJCConfig
 CONFIG = None
 
 @click.group()
-@click.option('--config-file')
+@click.option('--config-file', help="Path to yaml configuration file")
 def main(config_file):
     global CONFIG
     if config_file:
