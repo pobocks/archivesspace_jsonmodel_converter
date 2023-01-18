@@ -22,6 +22,8 @@ setuptools.setup(
     ],
     entry_points={"console_scripts": ["ajc=archivesspace_jsonmodel_converter:main"]},
     install_requires=[
+        "attrs>=22.2.0,<23",
+        "boltons>=21.0.0,<22",
         "click>=8.1.3,<9",
         "structlog>=21.1.0,<22",
         "python-json-logger>=2.0.2,<3"
