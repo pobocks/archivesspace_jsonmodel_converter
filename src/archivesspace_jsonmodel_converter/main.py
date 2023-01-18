@@ -1,9 +1,16 @@
 import click
 from .logger import get_logger
+from .configurator import AJCConfig
+
+CONFIG = None
 
 @click.group()
-def main():
-    pass
+@click.option('--config-file')
+def main(config_file):
+    if config_file:
+        CONFIG = AJCConfig(config_file)
+    else:
+        CONFIG = AJCConfig()
 
 @main.command()
 def create_subjects():
