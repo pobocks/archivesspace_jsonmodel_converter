@@ -7,6 +7,7 @@ CONFIG = None
 @click.group()
 @click.option('--config-file')
 def main(config_file):
+    global CONFIG
     if config_file:
         CONFIG = AJCConfig(config_file)
     else:
