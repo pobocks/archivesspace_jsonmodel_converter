@@ -1,9 +1,17 @@
 import click
 from .logger import get_logger
+from .configurator import AJCConfig
+
+CONFIG = None
 
 @click.group()
-def main():
-    pass
+@click.option('--config-file', help="Path to yaml configuration file")
+def main(config_file):
+    global CONFIG
+    if config_file:
+        CONFIG = AJCConfig(config_file)
+    else:
+        CONFIG = AJCConfig()
 
 @main.command()
 def create_subjects():
