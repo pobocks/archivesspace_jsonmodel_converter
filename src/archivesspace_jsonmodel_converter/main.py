@@ -4,14 +4,17 @@ from .configurator import AJCConfig
 
 CONFIG = None
 
-@click.group()
-@click.option('--config-file', help="Path to yaml configuration file")
-def main(config_file):
+def config(config_file):
     global CONFIG
     if config_file:
         CONFIG = AJCConfig(config_file)
     else:
         CONFIG = AJCConfig()
+
+@click.group()
+@click.option('--config-file', help="Path to yaml configuration file")
+def main(config_file):
+    config()
 
 @main.command()
 def create_subjects():
