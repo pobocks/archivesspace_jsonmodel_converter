@@ -14,7 +14,7 @@ def config(config_file):
 @click.group()
 @click.option('--config-file', help="Path to yaml configuration file")
 def main(config_file):
-    config()
+    config(config_file)
 
 @main.command()
 def create_subjects():
