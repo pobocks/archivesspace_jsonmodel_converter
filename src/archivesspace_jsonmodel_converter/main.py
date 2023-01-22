@@ -1,6 +1,7 @@
 import click
 from .logger import get_logger
 from .configurator import AJCConfig
+from .subjects import subjects_create
 
 CONFIG = None
 
@@ -21,3 +22,4 @@ def create_subjects():
     log = get_logger('main.subjects')
     log.info("Subject creation goes here")
     print("Create some subjects already!")
+    subjects_create(CONFIG)
