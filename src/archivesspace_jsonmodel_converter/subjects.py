@@ -7,7 +7,7 @@ import psycopg
 import sys
 import re
 from configparser import ConfigParser
-import crosswalker as xw
+import .crosswalker as xw
 
 CONFIG = None
 # Create and authorize the client
