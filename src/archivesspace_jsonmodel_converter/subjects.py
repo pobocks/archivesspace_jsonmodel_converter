@@ -11,7 +11,7 @@ from . import crosswalker as xw
 
 CONFIG = None
 # Create and authorize the client
-
+client = None # Asnake client, doing it this way for the nonce
 
 #need from tblLcshs and tblGeoPlaces
 pattern =  "\|([a-z])"
@@ -126,6 +126,7 @@ def process_subjects(tablename, firstfield):
 def subjects_create(config):
 	global CONFIG
 	CONFIG = config
+	global client
 	client = ASnakeClient()
 	client.authorize()	
 	xw.init_dbname(CONFIG["xwdbname"])
