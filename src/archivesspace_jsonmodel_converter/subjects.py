@@ -7,12 +7,11 @@ import psycopg
 import sys
 import re
 from configparser import ConfigParser
-import .crosswalker as xw
+from . import crosswalker as xw
 
 CONFIG = None
 # Create and authorize the client
-client = ASnakeClient()
-client.authorize()
+
 
 #need from tblLcshs and tblGeoPlaces
 pattern =  "\|([a-z])"
@@ -89,7 +88,7 @@ def create_subject_json(orig_subj, firstfield):
 	return subject
 
 def process_subjects(tablename, firstfield):
-	''' Take the alues and add them to ArchivesSpace '''
+	''' Take the values and add them to ArchivesSpace '''
 	conn = get_connection()
 	if conn is None:
 		return None
@@ -127,6 +126,8 @@ def process_subjects(tablename, firstfield):
 def subjects_create(config):
 	global CONFIG
 	CONFIG = config
+	client = ASnakeClient()
+	client.authorize()	
 	xw.init_dbname(CONFIG["xwdbname"])
 	xw.create_crosswalk()
 	for table in ("tblLcshs,a", "tblGeoPlaces,c"):
