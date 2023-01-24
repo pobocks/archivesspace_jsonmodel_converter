@@ -12,9 +12,15 @@ After installation, the tool should be available as `ajc`, running `ajc` will em
 
 ## Configuration
 
-AJC is configured via a YAML file. Some values are hardcoded as defaults and can be omitted - currently, this is limited to an `asnake_config` key containing values for the default admin account of a local ASpace instance.
+AJC is configured via a YAML file. Some values are hardcoded as defaults and can be omitted - currently, these include:
+
+- `asnake_config` - ASnake configuration to be passed to the client
+- `postgres_config` - Configuration values to be passed directly to psycopg
+- `crosswalk_config` - Config for the Crosswalk class in this application. Currently only supports `name`, which is the name of a sqlite3 database.
 
 By default, AJC looks for a `.archivesspace_jsonmodel_converter.yml` in the user's home directory.  A different file location can be specified via the AJC_CONFIG_FILE variable, or by providing a path to the `ajc` commend via the `--config-file` option.
+
+
 
 ## Conversion of Access DB to postgresql DB
 

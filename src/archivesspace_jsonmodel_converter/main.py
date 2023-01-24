@@ -22,4 +22,5 @@ def create_subjects():
     log = get_logger('main.subjects')
     log.info("Subject creation goes here")
     print("Create some subjects already!")
+    CONFIG.dynamic_configuration()
     subjects_create(CONFIG)
