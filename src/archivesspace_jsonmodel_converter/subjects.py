@@ -15,6 +15,7 @@ SUBFIELD_DICT = {"a": "topical", "b": "topical", "c" : "geographic", "d": "tempo
 client = None
 xw = None
 conn = None # postgres connection
+log = None
 
 def add_to_aspace(orig_id, subject):
     ''' Add a subject to ArchivesSpace'''
@@ -27,15 +28,15 @@ def add_to_aspace(orig_id, subject):
         # treat a conflicting record as a win
         if 'conflicting_record' in err:
             new_id = err['conflicting_record'][0]
-            # print("{} Already exists as {}".format(orig_id, new_id))
+            log.debug("{}}Already exists as {}".format(orig_id, new_id))
         else:
             # look for a reason for the error
             error = err
             if 'source' in err:
                 error = err['source'][0]
-            print("Error detected for ID {}: {}".format(orig_id, error))
+            log.error("Error detected for ID {}: {}".format(orig_id, error))
     else:
-        print("Item {} not created for unknown reasons: {}".format(orig_id, response))
+        log.error("Item {} not created for unknown reasons: {}".format(orig_id, response))
     return new_id
 
 def create_terms(subject,firstfield):
@@ -61,8 +62,9 @@ def create_subject_json(orig_subj, firstfield):
 def process_subjects(tablename, firstfield):
     ''' Take the values and add them to ArchivesSpace '''
     if conn is None:
+        print("No conm in process subjects")
         return None
-
+    ct = 0
     try:
         # create a cursor
         cur = conn.cursor()
@@ -74,33 +76,40 @@ def process_subjects(tablename, firstfield):
             orig_id = row[0]
             orig_val = row[1]
             try:
+                print("create subject")
                 subject = create_subject_json(orig_val, firstfield)
+                print("add to aspace")
                 new_id = add_to_aspace(orig_id, subject)
                 if new_id is not None:
+                    print("add {} {}".format(orig_val, new_id))
                     xw.add_or_update(tablename, orig_id,orig_val,new_id)
                 #TBD: what do we do with None new_ids?
                 else:
-                    print("{} '{}' was not converted".format(orig_id, orig_val))
+                    log.warn("{} '{}' was not converted".format(orig_id, orig_val))
             except Exception as e:
-                print("Exception '{}' triggered on {} '{}', which will not be converted".format(e, orig_id, orig_val))
+                log.error("Exception  triggered on {} '{}', which will not be converted".format( orig_id, orig_val), error=e)
             finally:
-                continue
+                ct = ct+1
+                if ct< 3:
+                    continue
     except Exception as e:
-        print(e)
-        print(sys.exc_info()[2])
+        log.error("{}: exc_info:{}".format(e, sys.exc_info()[2]))
 
 
 def subjects_create(config):
-    global client, xw, conn
-    client = config["d"]["asnake"].client
+    global client, xw, conn, log
+    client = config["d"]["aspace"]
     client.authorize()
     xw = config["d"]["crosswalk"]
     xw.create_crosswalk()
     conn = config["d"]["postgres"]
+ #   log = config["d"]["subjectlog"]
     for table in ("tblLcshs,a", "tblGeoPlaces,c"):
         x = table.split(',')
         process_subjects(x[0],x[1])
-
+    if conn:
+        conn.close()
+        
 # if __name__ == '__main__':
 #     #connect()
 #     process_lcshs('c:/Users/rlynn/aspacelinux/temp/lcshs.csv')

@@ -10,7 +10,8 @@ FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 class Crosswalk():
     def __init__(self, dbname):
         try:
-            self.conn = sqlite3.connect(f'{dbname}.db', row_factory=sqlite3.Row)
+            self.conn = sqlite3.connect(f'{dbname}.db')
+            self.conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             log.error('sqlite error', error=e)
             print(f'sqlite error: {e}')
@@ -41,11 +42,11 @@ class Crosswalk():
 
                     retval = True
                 else:
-                    print("already exists!")
+                    log.debug("Crosswalk table already exists!")
 
-        except Error as e:
-            print("unable to create Crosswalk: {}".format(e))
-
+        except sqlite3.Error as e:
+            log.error("Sqlite3 error: unable to create Crosswalk:", error=e )
+            print("Sqlite3 error: unable to create Crosswalk: {}".format(e) )
         return retval
 
     def add_or_update(self, orig_table, orig_id, value, aspace_id):
@@ -54,28 +55,28 @@ class Crosswalk():
         cursorObj = self.conn.cursor()
         entities = [orig_table, orig_id, value, aspace_id]
         try:
-            with conn:
+            with self.conn:
                 cursorObj.execute(UPSERT,entities)
-
-        except Error as e:
-            print("Couldn't even update: {}".format(e))
+        except sqlite3.Error as e:
+            log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
 
     def get_aspace_id(self, orig_table, orig_id):
         ''' returns the ArchivesSpace URL corresponding the the original table/original ID mapping'''
         cursorObj = self.conn.cursor()
         aspace_id = ""
         try:
-            with conn:
+            with self.conn:
                 cursorObj.execute(FETCH, [orig_table, orig_id])
                 row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
                 if row:
-                    return row['aspace_id']
-        except Error as e:
-            print(e)
-
+                    aspace_id = row['aspace_id']
+        except sqlite3.Error as e:
+            log.error("Unable to retrieve id for {}, {} with sqlite3 error".format(orig_table,orig_id), error=e)
+    
+        return aspace_id
 
     def drop_crosswalk(self):
         '''Drop the Crosswalk table all together'''
-        cursorObj = conn.cursor()
-        with conn:
+        cursorObj = self.conn.cursor()
+        with self.conn:
             cursorObj.execute("DROP TABLE Crosswalk")

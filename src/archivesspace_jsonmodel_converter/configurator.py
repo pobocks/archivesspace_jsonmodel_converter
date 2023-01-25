@@ -3,7 +3,7 @@ import attrs, yaml
 from boltons.dictutils import OMD
 from os.path import exists, expanduser
 from os import environ as env
-from asnake.aspace import ASpace
+from asnake.aspace import ASnakeClient
 from .crosswalker import Crosswalk
 import psycopg
 
@@ -61,7 +61,7 @@ in the OMD docs'''
             self.config['d'] = d = {} # store in config, d is a local convenience alias
 
         # ArchivesSnake
-        d['aspace'] = ASpace(**self.config['asnake_config'])
+        d['aspace'] = ASnakeClient(**self.config['asnake_config'])
 
         # PostgreSQL
         try:
