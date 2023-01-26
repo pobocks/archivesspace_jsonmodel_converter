@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="archivesspace_jsonmodel_converter",
-    version="0.0.1",
+    version="0.0.2",
     author="Dave and Bobbi Fox",
     author_email="pobocks@gmail.com",
     description="A tool for converting data into ArchivesSpace JSONModel objects.",

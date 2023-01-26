@@ -43,9 +43,6 @@ def setup_logging(level=None, stream_json=True, filename=None):
     if file_handler:
         root_logger.removeHandler(file_handler)
 
-    # Default configuration is info -> stdout - the ASPACE_JSONMODEL_CONVERTER_LOG_CONFIG var can be used to override default with pre-configured values
-    from_env = os.environ.get("ASPACE_JSONMODEL_CONVERTER_LOG_CONFIG", None)
-
     level = level  or logging.INFO
     if isinstance(level, str) and level_re.match(level):
         level = getattr(logging, level.upper())
