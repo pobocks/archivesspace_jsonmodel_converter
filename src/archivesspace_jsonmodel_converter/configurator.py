@@ -18,6 +18,11 @@ def ConfigSources(yaml_path):
 
     # Populate asnake, postgres, and sqlite config with defaults for local devserver
     omd.update({
+        'logging_config': {
+            # filename: 'file_to_log_to.log',
+            'level': 'INFO',
+            'stream_json': True
+        },
         'asnake_config': {
             'baseurl'         : 'http://localhost:4567',
             'username'        : 'admin',
