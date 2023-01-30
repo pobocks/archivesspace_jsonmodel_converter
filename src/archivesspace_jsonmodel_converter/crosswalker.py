@@ -3,6 +3,8 @@
 import sqlite3
 from .logger import get_logger
 log = get_logger('crosswalk')
+ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?)'
+UPDATE = 'UPDATE Crosswalk SET aspace_id="{}", value="{}" WHERE orig_table="{}" AND orig_id="{}"'
 
 UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?) ON CONFLICT
             DO UPDATE SET value = excluded.value, aspace_id = excluded.aspace_id"""
@@ -51,14 +53,27 @@ class Crosswalk():
 
     def add_or_update(self, orig_table, orig_id, value, aspace_id):
         '''Add a crosswalk row if it doesn't already exist; otherwise update'''
-
         cursorObj = self.conn.cursor()
         entities = [orig_table, orig_id, value, aspace_id]
         try:
             with self.conn:
-                cursorObj.execute(UPSERT,entities)
+                cursorObj.execute(ADD_NEW,entities)
+                self.conn.commit()
         except sqlite3.Error as e:
-            log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
+            if str(e).startswith('UNIQUE constraint failed'):
+                try:
+                    with self.conn:
+                        cursorObj.execute(UPDATE.format(aspace_id, value, orig_table, orig_id))
+                        self.conn.commit()
+                except sqlite3.Error as e:
+                    log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
+            else:
+                log.error("Problem adding {}: {}".format(entities),error=e)
+        # try:
+        #     with self.conn:
+        #         cursorObj.execute(UPSERT,entities)
+        # except sqlite3.Error as e:
+        #     log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
 
     def get_aspace_id(self, orig_table, orig_id):
         ''' returns the ArchivesSpace URL corresponding the the original table/original ID mapping'''
