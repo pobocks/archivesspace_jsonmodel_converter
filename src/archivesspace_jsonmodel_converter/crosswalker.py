@@ -1,6 +1,7 @@
 '''Supports the storage and retrieval of ID mapping between the origin system and ArchivesSpace'''
 
 import sqlite3
+import traceback
 from .logger import get_logger
 log = get_logger('crosswalk')
 ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?)'
@@ -16,7 +17,7 @@ class Crosswalk():
             self.conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             log.error('sqlite error', error=e)
-            print(f'sqlite error: {e}')
+            print(f'sqlite error: {traceback.format_exc(e)}')
 
     def __del__(self):
         self.conn.close();
@@ -43,8 +44,6 @@ class Crosswalk():
                                                                 UNIQUE(orig_table,orig_id))""")
 
                     retval = True
-                else:
-                    log.debug("Crosswalk table already exists!")
 
         except sqlite3.Error as e:
             log.error("Sqlite3 error: unable to create Crosswalk:", error=e )
@@ -59,14 +58,18 @@ class Crosswalk():
             with self.conn:
                 cursorObj.execute(ADD_NEW,entities)
                 self.conn.commit()
+                log.info("Added {} {} {} {}".format(orig_table, orig_id, value, aspace_id))
         except sqlite3.Error as e:
             if str(e).startswith('UNIQUE constraint failed'):
                 try:
                     with self.conn:
                         cursorObj.execute(UPDATE.format(aspace_id, value, orig_table, orig_id))
                         self.conn.commit()
+                        log.info("Updated {} {} {}".format(orig_table, value, aspace_id))
                 except sqlite3.Error as e:
                     log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
+                    print(f'sqlite error: {traceback.format_exc(e)}')
+
             else:
                 log.error("Problem adding {}: {}".format(entities),error=e)
         # try:
