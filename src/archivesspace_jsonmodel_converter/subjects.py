@@ -3,6 +3,7 @@ from asnake.jsonmodel import JM
 
 import sys
 import re
+import traceback
 
 # Create and authorize the client
 
@@ -19,16 +20,15 @@ log = None
 
 def add_to_aspace(orig_id, subject):
     ''' Add a subject to ArchivesSpace'''
-    new_id = None
+    aspace_id = None
     response = client.post('subjects', json=subject).json()
     if 'status' in response and response['status'] == 'Created':
-        new_id = response['uri']
+        aspace_id = response['uri']
     elif 'error' in response:
         err = response['error']
         # treat a conflicting record as a win
         if 'conflicting_record' in err:
-            new_id = err['conflicting_record'][0]
-            log.debug("{}}Already exists as {}".format(orig_id, new_id))
+            aspace_id = err['conflicting_record'][0]
         else:
             # look for a reason for the error
             error = err
@@ -37,7 +37,7 @@ def add_to_aspace(orig_id, subject):
             log.error("Error detected for ID {}: {}".format(orig_id, error))
     else:
         log.error("Item {} not created for unknown reasons: {}".format(orig_id, response))
-    return new_id
+    return aspace_id
 
 def create_terms(subject,firstfield):
     '''creates a list of terms in jsonmodel format'''
@@ -54,12 +54,12 @@ def create_terms(subject,firstfield):
                 raise e
     return terms
 
-def create_subject_json(orig_subj, firstfield):
+def create_subject_json(orig_subj, firstfield, source ):
     terms = create_terms(orig_subj, firstfield)
-    subject = JM.subject(publish="true", source="lcsh",vocabulary="/vocabularies/1", terms=terms)
+    subject = JM.subject(publish="true", source=source, vocabulary="/vocabularies/1", terms=terms)
     return subject
 
-def process_subjects(tablename, firstfield):
+def process_subjects(tablename, firstfield, source):
     ''' Take the values and add them to ArchivesSpace '''
     if conn is None:
         print("No conm in process subjects")
@@ -76,37 +76,38 @@ def process_subjects(tablename, firstfield):
             orig_id = row[0]
             orig_val = row[1]
             try:
-                print("create subject")
-                subject = create_subject_json(orig_val, firstfield)
-                print("add to aspace")
-                new_id = add_to_aspace(orig_id, subject)
-                if new_id is not None:
-                    print("add {} {}".format(orig_val, new_id))
-                    xw.add_or_update(tablename, orig_id,orig_val,new_id)
-                #TBD: what do we do with None new_ids?
+                subject = create_subject_json(orig_val, firstfield, source)
+                aspace_id = add_to_aspace(orig_id, subject)
+                if aspace_id is not None:
+                    xw.add_or_update(tablename, orig_id,orig_val,aspace_id)
+                #TBD: what do we do with None aspace_ids?
                 else:
-                    log.warn("{} '{}' was not converted".format(orig_id, orig_val))
+                    log.warn("{} ({}) was not converted".format(orig_id, orig_val))
             except Exception as e:
-                log.error("Exception  triggered on {} '{}', which will not be converted".format( orig_id, orig_val), error=e)
+                print(traceback.print_exc(e))
+                log.error("Exception  triggered on {} ({}), which will not be converted".format( orig_id, orig_val), error=e)
             finally:
-                ct = ct+1
-                if ct< 3:
+                ct = ct + 1
+                if ct < 4:
                     continue
+                else:
+                    break
     except Exception as e:
         log.error("{}: exc_info:{}".format(e, sys.exc_info()[2]))
 
 
-def subjects_create(config):
+def subjects_create(config,input_log):
     global client, xw, conn, log
+    log = input_log
     client = config["d"]["aspace"]
     client.authorize()
     xw = config["d"]["crosswalk"]
     xw.create_crosswalk()
     conn = config["d"]["postgres"]
  #   log = config["d"]["subjectlog"]
-    for table in ("tblLcshs,a", "tblGeoPlaces,c"):
+    for table in ("tblLcshs,a,lcsh", "tblGeoPlaces,c,lcsh", "tblCreatorPlaces,c,local"):
         x = table.split(',')
-        process_subjects(x[0],x[1])
+        process_subjects(x[0],x[1], x[2])
     if conn:
         conn.close()
         
