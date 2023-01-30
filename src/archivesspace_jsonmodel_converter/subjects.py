@@ -3,6 +3,7 @@ from asnake.jsonmodel import JM
 
 import sys
 import re
+import traceback
 
 # Create and authorize the client
 
@@ -28,7 +29,7 @@ def add_to_aspace(orig_id, subject):
         # treat a conflicting record as a win
         if 'conflicting_record' in err:
             new_id = err['conflicting_record'][0]
-            log.debug("{}}Already exists as {}".format(orig_id, new_id))
+ #           log.debug("{} {} Already exists as {}".format(orig_id, subject["terms"][0]["term"], new_id))
         else:
             # look for a reason for the error
             error = err
@@ -68,7 +69,9 @@ def process_subjects(tablename, firstfield):
     try:
         # create a cursor
         cur = conn.cursor()
-        cur.execute("SELECT * from {}".format(tablename))
+        #TEMPORARY
+        #cur.execute("SELECT * from {}".format(tablename))
+        cur.execute("SELECT * from {} LIMIT 3".format(tablename))
         while True:
             row = cur.fetchone()
             if row == None or len(row) < 2:
@@ -76,9 +79,7 @@ def process_subjects(tablename, firstfield):
             orig_id = row[0]
             orig_val = row[1]
             try:
-                print("create subject")
                 subject = create_subject_json(orig_val, firstfield)
-                print("add to aspace")
                 new_id = add_to_aspace(orig_id, subject)
                 if new_id is not None:
                     print("add {} {}".format(orig_val, new_id))
@@ -87,29 +88,31 @@ def process_subjects(tablename, firstfield):
                 else:
                     log.warn("{} '{}' was not converted".format(orig_id, orig_val))
             except Exception as e:
+                traceback.print_exc(e)
                 log.error("Exception  triggered on {} '{}', which will not be converted".format( orig_id, orig_val), error=e)
             finally:
                 ct = ct+1
-                if ct< 3:
+                if ct< 2:
                     continue
     except Exception as e:
-        log.error("{}: exc_info:{}".format(e, sys.exc_info()[2]))
+        log.error(" exc_info:{}".format(sys.exc_info()[2]), error=e)
 
 
-def subjects_create(config):
+def subjects_create(config, inputlog):
     global client, xw, conn, log
     client = config["d"]["aspace"]
     client.authorize()
     xw = config["d"]["crosswalk"]
     xw.create_crosswalk()
     conn = config["d"]["postgres"]
+    log = inputlog
  #   log = config["d"]["subjectlog"]
     for table in ("tblLcshs,a", "tblGeoPlaces,c"):
         x = table.split(',')
         process_subjects(x[0],x[1])
     if conn:
         conn.close()
-        
+
 # if __name__ == '__main__':
 #     #connect()
 #     process_lcshs('c:/Users/rlynn/aspacelinux/temp/lcshs.csv')

@@ -25,4 +25,4 @@ def create_subjects():
     print("Create some subjects already!")
 
     CONFIG.dynamic_configuration()
-    subjects_create(CONFIG)
+    subjects_create(CONFIG, log)
