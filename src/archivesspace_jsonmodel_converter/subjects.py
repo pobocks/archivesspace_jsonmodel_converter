@@ -41,20 +41,27 @@ def add_to_aspace(orig_id, subject):
 
 def create_terms(subject,firstfield):
     '''creates a list of terms in jsonmodel format'''
-    trmlist = re.split(pattern,subject)
-    trmlist.insert(0, firstfield)  # the first subfield indicator is passed through
-    term_dict  = map(lambda i: (trmlist[i], trmlist[i+1]), range(len(trmlist)-1)[::2])
     terms = []
-    for sub,term in term_dict:
-        if term != '':
-            try:
-                entry = JM.term(vocabulary="/vocabularies/1", term_type=SUBFIELD_DICT[sub], term= term)
-                terms.append(entry)
-            except Exception as e:
-                raise e
+    try:
+        trmlist = re.split(pattern,subject)
+        trmlist.insert(0, firstfield)  # the first subfield indicator is passed through
+        term_dict  = map(lambda i: (trmlist[i], trmlist[i+1]), range(len(trmlist)-1)[::2])
+        
+        for sub,term in term_dict:
+            if term != '':
+                try:
+                    entry = JM.term(vocabulary="/vocabularies/1", term_type=SUBFIELD_DICT[sub], term= term)
+                    terms.append(entry)
+                except Exception as e:
+                    raise e
+    except Exception as e:
+        log.error("Unable to process term list {} ".format(subject), error=e)
     return terms
 
 def create_subject_json(orig_subj, firstfield, source ):
+    ''' Create a json object for the subject
+         firstfield tells us which category the first piece of the input subject is
+         source tells us the source to use (e.g.: local or lcsh)'''
     terms = create_terms(orig_subj, firstfield)
     subject = JM.subject(publish="true", source=source, vocabulary="/vocabularies/1", terms=terms)
     return subject
@@ -62,12 +69,16 @@ def create_subject_json(orig_subj, firstfield, source ):
 def process_subjects(tablename, firstfield, source):
     ''' Take the values and add them to ArchivesSpace '''
     if conn is None:
-        print("No conm in process subjects")
+        log.error("No conn in process subjects")
         return None
     ct = 0
     try:
         # create a cursor
         cur = conn.cursor()
+        # get a count
+        cur.execute("SELECT COUNT(*) from {}".format(tablename))
+        count = cur.fetchone()
+        log.info("Table {} has {} entries".format(tablename, count[0] ))
         cur.execute("SELECT * from {}".format(tablename))
         while True:
             row = cur.fetchone()
@@ -75,25 +86,25 @@ def process_subjects(tablename, firstfield, source):
                 break
             orig_id = row[0]
             orig_val = row[1]
+            if orig_val is None:
+                log.warn("Orig_id {} has `None` as a value!".format(orig_id))
+                break
             try:
                 subject = create_subject_json(orig_val, firstfield, source)
                 aspace_id = add_to_aspace(orig_id, subject)
                 if aspace_id is not None:
-                    xw.add_or_update(tablename, orig_id,orig_val,aspace_id)
+                    added = xw.add_or_update(tablename, orig_id,orig_val,aspace_id)
+                    if added:
+                        ct = ct + 1
                 #TBD: what do we do with None aspace_ids?
                 else:
                     log.warn("{} ({}) was not converted".format(orig_id, orig_val))
             except Exception as e:
                 print(traceback.print_exc(e))
                 log.error("Exception  triggered on {} ({}), which will not be converted".format( orig_id, orig_val), error=e)
-            finally:
-                ct = ct + 1
-                if ct < 4:
-                    continue
-                else:
-                    break
     except Exception as e:
-        log.error("{}: exc_info:{}".format(e, sys.exc_info()[2]))
+        log.error("{}".format(e), exc_info=True)
+    log.info("{} entries processed correctly".format(ct))
 
 
 def subjects_create(config,input_log):

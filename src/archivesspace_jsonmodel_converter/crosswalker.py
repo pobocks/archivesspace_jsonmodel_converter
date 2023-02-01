@@ -46,18 +46,19 @@ class Crosswalk():
                     retval = True
 
         except sqlite3.Error as e:
-            log.error("Sqlite3 error: unable to create Crosswalk:", error=e )
-            print("Sqlite3 error: unable to create Crosswalk: {}".format(e) )
+            log.error("Sqlite3 error: unable to create Crosswalk:", error=e, exc_info=True )
         return retval
 
     def add_or_update(self, orig_table, orig_id, value, aspace_id):
         '''Add a crosswalk row if it doesn't already exist; otherwise update'''
         cursorObj = self.conn.cursor()
         entities = [orig_table, orig_id, value, aspace_id]
+        retval = False
         try:
             with self.conn:
                 cursorObj.execute(ADD_NEW,entities)
                 self.conn.commit()
+                retval = True
                 log.info("Added {} {} {} {}".format(orig_table, orig_id, value, aspace_id))
         except sqlite3.Error as e:
             if str(e).startswith('UNIQUE constraint failed'):
@@ -65,19 +66,14 @@ class Crosswalk():
                     with self.conn:
                         cursorObj.execute(UPDATE.format(aspace_id, value, orig_table, orig_id))
                         self.conn.commit()
+                        retval = True
                         log.info("Updated {} {} {}".format(orig_table, value, aspace_id))
                 except sqlite3.Error as e:
-                    log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
-                    print(f'sqlite error: {traceback.format_exc(e)}')
-
+                    log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e, exc_info=True )
             else:
                 log.error("Problem adding {}: {}".format(entities),error=e)
-        # try:
-        #     with self.conn:
-        #         cursorObj.execute(UPSERT,entities)
-        # except sqlite3.Error as e:
-        #     log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e )
-
+        return retval
+        
     def get_aspace_id(self, orig_table, orig_id):
         ''' returns the ArchivesSpace URL corresponding the the original table/original ID mapping'''
         cursorObj = self.conn.cursor()
