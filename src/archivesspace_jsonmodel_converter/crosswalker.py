@@ -73,22 +73,30 @@ class Crosswalk():
             else:
                 log.error("Problem adding {}: {}".format(entities),error=e)
         return retval
-        
-    def get_aspace_id(self, orig_table, orig_id):
-        ''' returns the ArchivesSpace URL corresponding the the original table/original ID mapping'''
+    
+     
+    def get_row(self, orig_table, orig_id):
+        '''Returns the row corresponding to the original table/original ID mapping'''
         cursorObj = self.conn.cursor()
-        aspace_id = ""
+        row = None
         try:
             with self.conn:
                 cursorObj.execute(FETCH, [orig_table, orig_id])
                 row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
-                if row:
-                    aspace_id = row['aspace_id']
         except sqlite3.Error as e:
             log.error("Unable to retrieve id for {}, {} with sqlite3 error".format(orig_table,orig_id), error=e)
     
+        return row
+    
+    def get_aspace_id(self, orig_table, orig_id):
+        ''' returns the ArchivesSpace URL corresponding to the original table/original ID mapping'''
+        aspace_id = None
+        
+        row = get_row(self, orig_table, orig_id)
+        if row:
+            aspace_id = row['aspace_id']
         return aspace_id
-
+    
     def drop_crosswalk(self):
         '''Drop the Crosswalk table all together'''
         cursorObj = self.conn.cursor()

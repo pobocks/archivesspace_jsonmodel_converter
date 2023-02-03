@@ -2,6 +2,7 @@ import click
 from .logger import setup_logging, get_logger
 from .configurator import AJCConfig
 from .subjects import subjects_create
+from .enumerations import convert_enums
 
 CONFIG = None
 
@@ -26,3 +27,10 @@ def create_subjects():
 
     CONFIG.dynamic_configuration()
     subjects_create(CONFIG, log)
+
+@main.command()
+def enum_conversion():
+    log = get_logger('main.enums')
+    log.info("Enum conversion")
+    CONFIG.dynamic_configuration()
+    convert_enums(CONFIG, log)
