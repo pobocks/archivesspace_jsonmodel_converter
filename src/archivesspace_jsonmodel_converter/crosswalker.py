@@ -9,6 +9,7 @@ UPDATE = 'UPDATE Crosswalk SET aspace_id="{}", value="{}" WHERE orig_table="{}" 
 
 UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?) ON CONFLICT
             DO UPDATE SET value = excluded.value, aspace_id = excluded.aspace_id"""
+FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 class Crosswalk():
     def __init__(self, dbname):
@@ -81,7 +82,7 @@ class Crosswalk():
         row = None
         try:
             with self.conn:
-                cursorObj.execute(FETCH, [orig_table, orig_id])
+                cursorObj.execute(FETCH_ROW, [orig_table, orig_id])
                 row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
         except sqlite3.Error as e:
             log.error("Unable to retrieve id for {}, {} with sqlite3 error".format(orig_table,orig_id), error=e)
@@ -92,7 +93,7 @@ class Crosswalk():
         ''' returns the ArchivesSpace URL corresponding to the original table/original ID mapping'''
         aspace_id = None
         
-        row = get_row(self, orig_table, orig_id)
+        row = self.get_row(orig_table, orig_id)
         if row:
             aspace_id = row['aspace_id']
         return aspace_id
