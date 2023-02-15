@@ -5,7 +5,7 @@ import traceback
 from .logger import get_logger
 log = get_logger('crosswalk')
 ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?)'
-UPDATE = 'UPDATE Crosswalk SET aspace_id="{}", value="{}" WHERE orig_table="{}" AND orig_id="{}"'
+UPDATE = 'UPDATE Crosswalk SET aspace_id=?, value=? WHERE orig_table=? AND orig_id=?'
 
 UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?) ON CONFLICT
             DO UPDATE SET value = excluded.value, aspace_id = excluded.aspace_id"""
@@ -65,7 +65,7 @@ class Crosswalk():
             if str(e).startswith('UNIQUE constraint failed'):
                 try:
                     with self.conn:
-                        cursorObj.execute(UPDATE.format(aspace_id, value, orig_table, orig_id))
+                        cursorObj.execute(UPDATE, [aspace_id, value, orig_table, orig_id])
                         self.conn.commit()
                         retval = True
                         log.info("Updated {} {} {}".format(orig_table, value, aspace_id))
@@ -74,8 +74,8 @@ class Crosswalk():
             else:
                 log.error("Problem adding {}: {}".format(entities),error=e)
         return retval
-    
-     
+
+
     def get_row(self, orig_table, orig_id):
         '''Returns the row corresponding to the original table/original ID mapping'''
         cursorObj = self.conn.cursor()
@@ -86,18 +86,18 @@ class Crosswalk():
                 row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
         except sqlite3.Error as e:
             log.error("Unable to retrieve id for {}, {} with sqlite3 error".format(orig_table,orig_id), error=e)
-    
+
         return row
-    
+
     def get_aspace_id(self, orig_table, orig_id):
         ''' returns the ArchivesSpace URL corresponding to the original table/original ID mapping'''
         aspace_id = None
-        
+
         row = self.get_row(orig_table, orig_id)
         if row:
             aspace_id = row['aspace_id']
         return aspace_id
-    
+
     def drop_crosswalk(self):
         '''Drop the Crosswalk table all together'''
         cursorObj = self.conn.cursor()

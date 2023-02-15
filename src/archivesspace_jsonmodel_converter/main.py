@@ -2,6 +2,7 @@ import click
 from .logger import setup_logging, get_logger
 from .configurator import AJCConfig
 from .subjects import subjects_create
+from .resources import resources_create
 from .enumerations import convert_enums
 
 CONFIG = None
@@ -34,3 +35,12 @@ def enum_conversion():
     log.info("Enum conversion")
     CONFIG.dynamic_configuration()
     convert_enums(CONFIG, log)
+
+@main.command()
+def create_resources():
+    log = get_logger('main.resources')
+    log.info("Resource creation goes here")
+    print("Create some resources!")
+
+    CONFIG.dynamic_configuration()
+    resources_create(CONFIG, log)

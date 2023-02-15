@@ -1,7 +1,6 @@
 # Subjects
 from asnake.jsonmodel import JM
 
-import sys
 import re
 import traceback
 
@@ -46,7 +45,7 @@ def create_terms(subject,firstfield):
         trmlist = re.split(pattern,subject)
         trmlist.insert(0, firstfield)  # the first subfield indicator is passed through
         term_dict  = map(lambda i: (trmlist[i], trmlist[i+1]), range(len(trmlist)-1)[::2])
-        
+
         for sub,term in term_dict:
             if term != '':
                 try:
@@ -100,7 +99,7 @@ def process_subjects(tablename, firstfield, source):
                 else:
                     log.warn("{} ({}) was not converted".format(orig_id, orig_val))
             except Exception as e:
-                print(traceback.print_exc(e))
+                traceback.print_exc(e)
                 log.error("Exception  triggered on {} ({}), which will not be converted".format( orig_id, orig_val), error=e)
     except Exception as e:
         log.error("{}".format(e), exc_info=True)
@@ -121,7 +120,7 @@ def subjects_create(config,input_log):
         process_subjects(x[0],x[1], x[2])
     if conn:
         conn.close()
-        
+
 # if __name__ == '__main__':
 #     #connect()
 #     process_lcshs('c:/Users/rlynn/aspacelinux/temp/lcshs.csv')
