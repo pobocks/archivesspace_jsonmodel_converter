@@ -33,9 +33,9 @@ def add_to_aspace(orig_id, subject):
             error = err
             if 'source' in err:
                 error = err['source'][0]
-            log.error("Error detected for ID {}: {}".format(orig_id, error))
+            log.error(f"Error detected for ID {orig_id}",error=error)
     else:
-        log.error("Item {} not created for unknown reasons: {}".format(orig_id, response))
+        log.error(f"Item {orig_id} not created for unknown reasons", error=response)
     return aspace_id
 
 def create_terms(subject,firstfield):
@@ -54,7 +54,7 @@ def create_terms(subject,firstfield):
                 except Exception as e:
                     raise e
     except Exception as e:
-        log.error("Unable to process term list {} ".format(subject), error=e)
+        log.error(f"Unable to process term list {subject} ", error=e)
     return terms
 
 def create_subject_json(orig_subj, firstfield, source ):
@@ -75,10 +75,10 @@ def process_subjects(tablename, firstfield, source):
         # create a cursor
         cur = conn.cursor()
         # get a count
-        cur.execute("SELECT COUNT(*) from {}".format(tablename))
+        cur.execute(f"SELECT COUNT(*) from {tablename}")
         count = cur.fetchone()
-        log.info("Table {} has {} entries".format(tablename, count[0] ))
-        cur.execute("SELECT * from {}".format(tablename))
+        log.info(f"Table {tablename} has {count[0]} entries")
+        cur.execute(f"SELECT * from {tablename}")
         while True:
             row = cur.fetchone()
             if row == None or len(row) < 2:
@@ -86,7 +86,7 @@ def process_subjects(tablename, firstfield, source):
             orig_id = row[0]
             orig_val = row[1]
             if orig_val is None:
-                log.warn("Orig_id {} has `None` as a value!".format(orig_id))
+                log.warn(f"Original ID {orig_id} has 'None' as a value!")
                 break
             try:
                 subject = create_subject_json(orig_val, firstfield, source)
@@ -97,13 +97,13 @@ def process_subjects(tablename, firstfield, source):
                         ct = ct + 1
                 #TBD: what do we do with None aspace_ids?
                 else:
-                    log.warn("{} ({}) was not converted".format(orig_id, orig_val))
+                    log.warn(f"{orig_id} ({orig_val}) was not converted")
             except Exception as e:
                 traceback.print_exc(e)
-                log.error("Exception  triggered on {} ({}), which will not be converted".format( orig_id, orig_val), error=e)
+                log.error(f"Exception  triggered on {orig_id} ({orig_val}), which will not be converted", error=e)
     except Exception as e:
-        log.error("{}".format(e), exc_info=True)
-    log.info("{} entries processed correctly".format(ct))
+        log.error("Unexpected exception", error=e,exc_info=True)
+    log.info(f"{ct} entries processed correctly")
 
 
 def subjects_create(config,input_log):

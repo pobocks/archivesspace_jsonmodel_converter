@@ -60,7 +60,7 @@ class Crosswalk():
                 cursorObj.execute(ADD_NEW,entities)
                 self.conn.commit()
                 retval = True
-                log.info("Added {} {} {} {}".format(orig_table, orig_id, value, aspace_id))
+                log.info(f"Added {orig_table} {orig_id} {value} {aspace_id}")
         except sqlite3.Error as e:
             if str(e).startswith('UNIQUE constraint failed'):
                 try:
@@ -68,11 +68,11 @@ class Crosswalk():
                         cursorObj.execute(UPDATE, [aspace_id, value, orig_table, orig_id])
                         self.conn.commit()
                         retval = True
-                        log.info("Updated {} {} {}".format(orig_table, value, aspace_id))
+                        log.info(f"Updated {orig_table} {value} {aspace_id}")
                 except sqlite3.Error as e:
-                    log.error("Couldn't even update: {} with sqlite3 error ".format(entities),error=e, exc_info=True )
+                    log.error(f"Couldn't even update: {entries} with sqlite3 error ",error=e, exc_info=True )
             else:
-                log.error("Problem adding {}: {}".format(entities),error=e)
+                log.error(f"Problem adding {entities}",error=e)
         return retval
 
 
@@ -85,7 +85,7 @@ class Crosswalk():
                 cursorObj.execute(FETCH_ROW, [orig_table, orig_id])
                 row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
         except sqlite3.Error as e:
-            log.error("Unable to retrieve id for {}, {} with sqlite3 error".format(orig_table,orig_id), error=e)
+            log.error(f"Unable to retrieve id for {orig_table}, {orig_id} with sqlite3 error", error=e)
 
         return row
 

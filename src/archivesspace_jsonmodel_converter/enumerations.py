@@ -14,7 +14,7 @@ def file_legit():
             try:
                 for h in HEADERS:
                     if h not in header:
-                        raise Exception("Badly formed or missing header {}".format(header))  
+                        raise Exception(f"Badly formed or missing header {header}")  
             except Exception as e:
                 raise e
     except Exception as e:
@@ -23,7 +23,7 @@ def add_to_crosswalk(line):
     added = False
     if line["enum"].startswith('**'):
        # some values have been marked with '***' to indicate that they've been looked at, but determination of the associated enum is pending
-        log.warn("Type {} Value{} ( {}) is pending".format(line["type"], line["val"], line["valid"]))
+        log.warn(f"Type {line['type']} Value{line['val']} ( {line['valid']}) is pending")
     else:
         added = xw.add_or_update('Enums', line["valid"], line["val"], line["enum"])
     return added
@@ -50,5 +50,5 @@ def convert_enums(config, input_log):
                 if added:
                     ct = ct +1
     except Exception as e:
-        log.error("unable to process {} ".format(filepath), error =e , exc_info = True)
-    log.info("{} enums added or updated".format(ct))
+        log.error(f"Unable to process '{filepath}' ", error =e , exc_info = True)
+    log.info("{ct} enums added or updated")
