@@ -4,6 +4,8 @@ from .configurator import AJCConfig
 from .subjects import subjects_create
 from .resources import resources_create
 from .enumerations import convert_enums
+from .name_xwalk import crosswalk_names
+
 
 CONFIG = None
 
@@ -44,3 +46,10 @@ def create_resources():
 
     CONFIG.dynamic_configuration()
     resources_create(CONFIG, log)
+    
+@main.command()
+def create_name_crosswalk():
+    log = get_logger('main.xwalk_names')
+    log.info("Name crosswalk")
+    CONFIG.dynamic_configuration()
+    crosswalk_names(CONFIG, log)
