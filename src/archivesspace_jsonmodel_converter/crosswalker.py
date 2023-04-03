@@ -2,6 +2,7 @@
 
 import sqlite3
 import traceback
+from os import path
 from .logger import get_logger
 log = get_logger('crosswalk')
 ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?)'
@@ -12,9 +13,11 @@ UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 class Crosswalk():
-    def __init__(self, dbname):
+    def __init__(self, config):
+        db_path = path.join(config['working_directory'],
+                            config['crosswalk_config']['name'] + '.sqlite')
         try:
-            self.conn = sqlite3.connect(f'{dbname}.db')
+            self.conn = sqlite3.connect(db_path)
             self.conn.row_factory = sqlite3.Row
         except sqlite3.Error as e:
             log.error('sqlite error', error=e)

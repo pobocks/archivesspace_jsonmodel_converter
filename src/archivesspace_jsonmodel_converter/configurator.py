@@ -2,7 +2,7 @@ import attrs, yaml
 
 from boltons.dictutils import OMD
 from os.path import exists, expanduser
-from os import environ as env
+from os import environ, makedirs
 from asnake.aspace import ASnakeClient
 from .crosswalker import Crosswalk
 import psycopg
@@ -34,18 +34,22 @@ def ConfigSources(yaml_path):
         },
         'crosswalk_config': {
             'name': 'crosswalk',
-        }
+        },
+        'working_directory' : expanduser("~/aspace_jsonmodel_converter")
     })
 
     if exists(yaml_path):
         with open(yaml_path, 'r') as f:
             omd.update_extend(yaml.safe_load(f))
+
+    makedirs(omd['working_directory'], exist_ok=True)
+
     return omd
 
 @attrs.define(slots=True, repr=False)
 class AJCConfig:
     '''Configuration object.  Essentially a convenience wrapper over an instance of :class:`boltons.dictutils.OrderedMultiDict`'''
-    config = attrs.field(converter=ConfigSources, default=attrs.Factory(lambda: env.get('AJC_CONFIG_FILE', "~/.archivesspace_jsonmodel_converter.yml")))
+    config = attrs.field(converter=ConfigSources, default=attrs.Factory(lambda: environ.get('AJC_CONFIG_FILE', "~/.archivesspace_jsonmodel_converter.yml")))
 
     def __setitem__(self, k, v):
         return self.config.add(k, v)
@@ -78,6 +82,6 @@ in the OMD docs'''
                 d['postgres'].close()
 
         # Crosswalk (sqlite)
-        d['crosswalk'] = Crosswalk(self.config['crosswalk_config']['name'])
+        d['crosswalk'] = Crosswalk(self.config)
     def __repr__(self):
         return "AJCConfig({})".format(self.config.todict())
