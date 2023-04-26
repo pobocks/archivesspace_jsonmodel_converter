@@ -51,4 +51,4 @@ def convert_enums(config, input_log):
                     ct = ct +1
     except Exception as e:
         log.error(f"Unable to process '{filepath}' ", error =e , exc_info = True)
-    log.info("{ct} enums added or updated")
+    log.info(f"{ct} enums added or updated")
