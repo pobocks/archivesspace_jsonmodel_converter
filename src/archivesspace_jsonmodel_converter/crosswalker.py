@@ -73,7 +73,7 @@ class Crosswalk():
                         retval = True
                         log.info(f"Updated {orig_table} {value} {aspace_id}")
                 except sqlite3.Error as e:
-                    log.error(f"Couldn't even update: {entries} with sqlite3 error ",error=e, exc_info=True )
+                    log.error(f"Couldn't even update: {entities} with sqlite3 error ",error=e, exc_info=True )
             else:
                 log.error(f"Problem adding {entities}",error=e)
         return retval
