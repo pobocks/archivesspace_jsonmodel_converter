@@ -14,7 +14,7 @@ def process_resources(tablename):
                         WHERE "coll##" IS NOT NULL''') # Deal with special "disposition colls"
         count = cur.fetchone()['count']
         log.info(f"Processing {count} resources in table {tablename}")
-        for row in cur.execute(f'SELECT * FROM "{tablename}"'):
+        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename}"'):
             if not row['coll##']: continue # FIXME: we'll deal with missing coll##s later
             id_fields = {f'id_{idx}':segment for idx, segment in enumerate(row['coll##'].split('-'))}
             # Prepend prefix to id_0 to guarantee uniqueness
