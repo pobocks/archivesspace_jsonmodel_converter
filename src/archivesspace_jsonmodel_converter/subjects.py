@@ -17,18 +17,17 @@ xw = None
 conn = None # postgres connection
 log = None
 
-def add_to_aspace(orig_id, subject, id):
-    ''' Add a subject to ArchivesSpace'''
-    #TODO:  exapand add_to_aspace to include already-defined aspace_id
+def add_to_aspace(orig_id, subject, aid):
+    ''' Add/update a subject to ArchivesSpace'''
     aspace_id = None
     response = None
-    if id is not None:
+    if aid is not None:
         try:
-            subj = client.get(f'subjects/{id}').json()
+            subj = client.get(aid).json()
             subject['lock_version'] = subj['lock_version']
         except Exception as e:
-            log.error(f'unable to correctly retrieve lock_version for id {id}')                
-        response = client.post(f'subjects/{id}', json=subject).json()
+            log.error(f'unable to correctly retrieve lock_version for uri {aid}')                
+        response = client.post(aid, json=subject).json()
     else:
         response = client.post('subjects', json=subject).json()
     if 'status' in response and (response['status'] == 'Created' or response['status'] == 'Updated'):
@@ -97,8 +96,6 @@ def process_subjects(tablename, firstfield, source):
             try:
                 subject = create_subject_json(orig_val, firstfield, source)
                 aid = xw.get_aspace_id(tablename, orig_id)
-                if aid is not None:
-                    aid = aid.split('/')[-1]
                 aspace_id = add_to_aspace(orig_id, subject, aid)
                 if aspace_id is not None:
                     added = xw.add_or_update(tablename, orig_id,orig_val,aspace_id)
