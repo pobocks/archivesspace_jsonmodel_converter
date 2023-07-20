@@ -11,10 +11,10 @@ def process_resources(tablename):
     with conn.cursor(row_factory=dict_row) as cur:
         # get a count
         cur.execute(f'''SELECT COUNT(*) FROM "{tablename}"
-                        WHERE "coll##" IS NOT NULL''') # Deal with special "disposition colls"
+                        WHERE collId IN (SELECT DISTINCT collId FROM tblItems WHERE deptcodeid=48) AND "coll##" IS NOT NULL''') # Deal with special "disposition colls"; select only Archives
         count = cur.fetchone()['count']
         log.info(f"Processing {count} resources in table {tablename}")
-        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename}"'):
+        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename}" WHERE collId IN (SELECT DISTINCT collId FROM tblItems WHERE deptcodeid=48)'):
             if not row['coll##']: continue # FIXME: we'll deal with missing coll##s later
             id_fields = {f'id_{idx}':segment for idx, segment in enumerate(row['coll##'].split('-'))}
             # Prepend prefix to id_0 to guarantee uniqueness
@@ -73,12 +73,25 @@ def resources_create(config, input_log):
     conn = config["d"]["postgres"]
     tablename = "tblcolls"
     for orig_id, json in process_resources(tablename):
-        res = client.post('repositories/2/resources', json=json).json()
-        if 'status' in res and res['status'] == 'Created':
+        aid = xw.get_aspace_id(tablename, orig_id)
+        if aid is not None:
+            rsc = client.get(aid).json()
+            json['lock_version'] = rsc['lock_version']
+            res = client.post(aid, json=json).json()
+        else:
+              res = client.post('repositories/2/resources', json=json).json()
+        if 'status' in res and (res['status'] == 'Created' or res['status'] == 'Updated'):
             aspace_uri = res['uri']
             xw.add_or_update(tablename, orig_id, 'resource', aspace_uri)
-        else:
+            log.info(f'Added or updated {tablename} {orig_id}')
+        elif 'error' in res:
             error = res['error']
-            if 'source' in error:
-                error = error['source'][0]
-            log.error(f"Error detected for ID {orig_id}: {error}")
+            if 'conflicting_record' in res['error']:
+                aspace_id = error['conflicting_record'][0]
+                log.warn(f'Possible duplicate for ID {orig_id} in {tablename} found with URI of {aspace_id}')
+                if 'source' in error:
+                    error = error['source'][0]
+                log.error(f"Error detected for ID {orig_id} in {tablename}",error=error)
+        else:
+            log.error(f"Collection {orig_id} in {tablename} not created for unknown reasons", error=res)
+    
