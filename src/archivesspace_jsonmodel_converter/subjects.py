@@ -50,7 +50,7 @@ def add_to_aspace(tablename, orig_id, subject, aid):
                 error = err['source'][0]
             log.error(f"Error detected for ID {orig_id} in {tablename}",error=error)
     else:
-        log.error(f"Item {orig_id} not created for unknown reasons", error=response)
+        log.error(f"Item {orig_id} in {tablename} not created for unknown reasons", error=response)
     return aspace_id
 
 def create_terms(subject,firstfield):
