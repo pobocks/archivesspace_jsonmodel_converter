@@ -7,14 +7,14 @@ xw = None
 conn = None
 log = None
 
-def process_resources(tablename):
+def process_resources(tablename, ao_tablename, dept_id):
     with conn.cursor(row_factory=dict_row) as cur:
         # get a count
         cur.execute(f'''SELECT COUNT(*) FROM "{tablename}"
-                        WHERE collId IN (SELECT DISTINCT collId FROM tblItems WHERE deptcodeid=48) AND "coll##" IS NOT NULL''') # Deal with special "disposition colls"; select only Archives
+                        WHERE "coll##" IS NOT NULL AND collid IN (SELECT DISTINCT collid FROM "{ao_tablename}" WHERE deptcodeid = {dept_id})''') # Deal with special "disposition colls"
         count = cur.fetchone()['count']
         log.info(f"Processing {count} resources in table {tablename}")
-        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename}" WHERE collId IN (SELECT DISTINCT collId FROM tblItems WHERE deptcodeid=48)'):
+        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename} WHERE collid IN (SELECT DISTINCT collid FROM "{ao_tablename}" WHERE deptcodeid = {dept_id})"'):
             if not row['coll##']: continue # FIXME: we'll deal with missing coll##s later
             id_fields = {f'id_{idx}':segment for idx, segment in enumerate(row['coll##'].split('-'))}
             # Prepend prefix to id_0 to guarantee uniqueness
@@ -72,14 +72,16 @@ def resources_create(config, input_log):
     xw.create_crosswalk()
     conn = config["d"]["postgres"]
     tablename = "tblcolls"
-    for orig_id, json in process_resources(tablename):
-        aid = xw.get_aspace_id(tablename, orig_id)
+    ao_tablename ="tblitems"
+    dept_id = 48
+    for orig_id, json in process_resources(tablename, ao_tablename, dept_id):
+        id = xw.get_aspace_id(tablename, orig_id)
         if aid is not None:
             rsc = client.get(aid).json()
             json['lock_version'] = rsc['lock_version']
             res = client.post(aid, json=json).json()
         else:
-              res = client.post('repositories/2/resources', json=json).json()
+            res = client.post('repositories/2/resources', json=json).json()
         if 'status' in res and (res['status'] == 'Created' or res['status'] == 'Updated'):
             aspace_uri = res['uri']
             xw.add_or_update(tablename, orig_id, 'resource', aspace_uri)
@@ -89,9 +91,8 @@ def resources_create(config, input_log):
             if 'conflicting_record' in res['error']:
                 aspace_id = error['conflicting_record'][0]
                 log.warn(f'Possible duplicate for ID {orig_id} in {tablename} found with URI of {aspace_id}')
-                if 'source' in error:
-                    error = error['source'][0]
+            if 'source' in error:
+                error = error['source'][0]
                 log.error(f"Error detected for ID {orig_id} in {tablename}",error=error)
         else:
             log.error(f"Collection {orig_id} in {tablename} not created for unknown reasons", error=res)
-    
