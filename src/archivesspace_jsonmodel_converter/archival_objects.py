@@ -35,7 +35,7 @@ def process_archival_objects(tablename, resource_tablename, dept_id):
             yield row['collid'], row['itemid'], JM.archival_object(
                 component_id=row['itemid'],
                 title=row['title'],
-                resource=JM.resource(ref=aid),
+                resource={"ref":aid},
                 external_ids=[
                     JM.external_id(external_id="COLLID: " + str(row['collid']), source="access")
                     JM.external_id(external_id=str(row['itemid']), source="access")
@@ -66,7 +66,6 @@ def archival_objects_create(config, input_log):
             aspace_uri = res['uri']
             xw.add_or_update(tablename, orig_id, 'archival_object', aspace_uri)
             log.info(f'Added or updated {tablename} {orig_id}')
-            # TODO add ao to resource record
         elif 'error' in res:
             error = res['error']
             if 'conflicting_record' in error:
