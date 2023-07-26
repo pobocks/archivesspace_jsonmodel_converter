@@ -4,7 +4,7 @@ from csv import reader
 xw = None
 log = None
 HEADERS = ["typeid","type","valid","val","enum"]
-  
+
 def file_legit():
     try:
         with open(filepath,'r') as f:
@@ -14,11 +14,12 @@ def file_legit():
             try:
                 for h in HEADERS:
                     if h not in header:
-                        raise Exception(f"Badly formed or missing header {header}")  
+                        raise Exception(f"Badly formed or missing header {header}")
             except Exception as e:
                 raise e
     except Exception as e:
         raise e
+
 def add_to_crosswalk(line):
     added = False
     if line["enum"].startswith('**'):
@@ -27,8 +28,8 @@ def add_to_crosswalk(line):
     else:
         added = xw.add_or_update('Enums', line["valid"], line["val"], line["enum"])
     return added
-        
-        
+
+
 def convert_enums(config, input_log):
     '''Process a CSV file that has been hand-created to crosswalk data from the tblLookupValues to the enums in ArchivesSpace'''
     global filepath, xw, log
@@ -39,7 +40,7 @@ def convert_enums(config, input_log):
     try:
         xw.create_crosswalk()
         file_legit()
-        with open(filepath, mode ='r') as file:  
+        with open(filepath, mode ='r') as file:
         # reading csv file
             csv_dict = csv.DictReader(file)
             for lines in csv_dict:

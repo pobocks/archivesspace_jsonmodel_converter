@@ -14,7 +14,7 @@ def process_resources(tablename, ao_tablename, dept_id):
                         WHERE "coll##" IS NOT NULL AND collid IN (SELECT DISTINCT collid FROM "{ao_tablename}" WHERE deptcodeid = {dept_id})''') # Deal with special "disposition colls"
         count = cur.fetchone()['count']
         log.info(f"Processing {count} resources in table {tablename}")
-        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename} WHERE collid IN (SELECT DISTINCT collid FROM "{ao_tablename}" WHERE deptcodeid = {dept_id})"'):
+        for row in cur.execute(f'SELECT "coll##", collid, pre, "1st yr"::varchar, "last yr"::varchar, "collection title" FROM "{tablename}" WHERE collid IN (SELECT DISTINCT collid FROM "{ao_tablename}" WHERE deptcodeid = {dept_id})'):
             if not row['coll##']: continue # FIXME: we'll deal with missing coll##s later
             id_fields = {f'id_{idx}':segment for idx, segment in enumerate(row['coll##'].split('-'))}
             # Prepend prefix to id_0 to guarantee uniqueness
@@ -60,7 +60,8 @@ def process_resources(tablename, ao_tablename, dept_id):
                 title=row['collection title'],
                 external_ids=[
                     JM.external_id(external_id=str(row['collid']), source="access")
-                ]
+                ],
+                publish=True
             )
 
 def resources_create(config, input_log):
@@ -75,7 +76,7 @@ def resources_create(config, input_log):
     ao_tablename ="tblitems"
     dept_id = 48
     for orig_id, json in process_resources(tablename, ao_tablename, dept_id):
-        id = xw.get_aspace_id(tablename, orig_id)
+        aid = xw.get_aspace_id(tablename, orig_id)
         if aid is not None:
             rsc = client.get(aid).json()
             json['lock_version'] = rsc['lock_version']

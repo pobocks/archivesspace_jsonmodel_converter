@@ -35,11 +35,13 @@ def process_archival_objects(tablename, resource_tablename, dept_id):
             yield row['collid'], row['itemid'], JM.archival_object(
                 component_id=row['itemid'],
                 title=row['title'],
+                level="item",
                 resource={"ref":aid},
                 external_ids=[
-                    JM.external_id(external_id="COLLID: " + str(row['collid']), source="access")
+                    JM.external_id(external_id="COLLID: " + str(row['collid']), source="access"),
                     JM.external_id(external_id=str(row['itemid']), source="access")
-                ]
+                ],
+                publish=True
             )
 
 good_statii = frozenset(('Created', 'Updated',))
