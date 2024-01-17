@@ -12,6 +12,8 @@ UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(
             DO UPDATE SET value = excluded.value, aspace_id = excluded.aspace_id"""
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
+FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
+
 class Crosswalk():
     def __init__(self, config):
         db_path = path.join(config['working_directory'],
@@ -89,6 +91,19 @@ class Crosswalk():
                 row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
         except sqlite3.Error as e:
             log.error(f"Unable to retrieve id for {orig_table}, {orig_id} with sqlite3 error", error=e)
+
+        return row
+    
+    def get_row_by_aspace_id(self, aspace_id):
+        '''Returns the row corresponding to the aspace_id'''
+        cursorObj = self.conn.cursor()
+        row = None
+        try:
+            with self.conn:
+                cursorObj.execute(FETCH_ROW, [aspace_id])
+                row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
+        except sqlite3.Error as e:
+            log.error(f"Unable to retrieve id for {aspace_id} with sqlite3 error", error=e)
 
         return row
 
