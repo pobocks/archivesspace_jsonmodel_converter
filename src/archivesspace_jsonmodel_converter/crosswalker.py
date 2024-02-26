@@ -21,9 +21,10 @@ class Crosswalk():
         try:
             self.conn = sqlite3.connect(db_path)
             self.conn.row_factory = sqlite3.Row
+            log.info(f"Crosswalk path is {db_path}")
         except sqlite3.Error as e:
             log.error('sqlite error', error=e)
-            print(f'sqlite error: {traceback.format_exc(e)}')
+            log.error(f'sqlite error: {traceback.format_exc(e)}')
 
     def __del__(self):
         self.conn.close();
@@ -65,7 +66,7 @@ class Crosswalk():
                 cursorObj.execute(ADD_NEW,entities)
                 self.conn.commit()
                 retval = True
-                log.info(f"Added {orig_table} {orig_id} {value} {aspace_id}")
+                log.info(f"Added to {orig_table} [{orig_id}] [{value}] [{aspace_id}]")
         except sqlite3.Error as e:
             if str(e).startswith('UNIQUE constraint failed'):
                 try:
@@ -73,7 +74,7 @@ class Crosswalk():
                         cursorObj.execute(UPDATE, [aspace_id, value, orig_table, orig_id])
                         self.conn.commit()
                         retval = True
-                        log.info(f"Updated {orig_table} {value} {aspace_id}")
+                        log.info(f"Updated {orig_table} [{orig_id}] [{value}] [{aspace_id}]")
                 except sqlite3.Error as e:
                     log.error(f"Couldn't even update: {entities} with sqlite3 error ",error=e, exc_info=True )
             else:
