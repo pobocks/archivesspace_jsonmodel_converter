@@ -4,11 +4,11 @@ from csv import reader
 
 xw = None
 log = None
-HEADERS = ["original","convert to"]
+HEADERS = ["original","convert"]
   
 def file_legit():
     try:
-        with open(filepath,'r') as f:
+        with open(filepath,'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
             header = next(reader)
             # make sure we got the right file
@@ -22,7 +22,11 @@ def file_legit():
         raise e
 def add_to_crosswalk(line):
     added = False
-    added = xw.add_or_update('Names', line["original"], line["convert to"], '')
+    orig =line["original"] 
+    conv = line["convert"]
+    if conv.strip() == '':
+        conv = orig   
+    added = xw.add_or_update('Names', orig, conv, '')
     return added
         
         
@@ -36,13 +40,13 @@ def crosswalk_names(config, input_log):
     try:
         xw.create_crosswalk()
         file_legit()
-        with open(filepath, mode ='r') as file:  
+        with open(filepath, mode ='r', encoding='utf-8-sig') as file:  
         # reading csv file
             csv_dict = csv.DictReader(file)
-            for lines in csv_dict:
-                added = add_to_crosswalk(lines)
+            for line in csv_dict:
+                added = add_to_crosswalk(line)
                 if added:
                     ct = ct +1
     except Exception as e:
         log.error(f"Unable to process '{filepath}' ", error =e , exc_info = True)
-    log.info("{ct} names added or updated")
+    log.info(f"{ct} names added or updated")
