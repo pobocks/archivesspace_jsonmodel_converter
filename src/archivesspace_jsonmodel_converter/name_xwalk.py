@@ -24,7 +24,10 @@ def add_to_crosswalk(line):
     added = False
     orig =line["original"] 
     conv = line["convert"]
-    if conv.strip() == '':
+    if conv.strip() != '':
+        if xw.get_row('Names', conv) is None:
+            xw.add_or_update('Names', conv, conv, '') # make sure that the convert-to name has an entry in the table
+    else:
         conv = orig   
     added = xw.add_or_update('Names', orig, conv, '')
     return added
