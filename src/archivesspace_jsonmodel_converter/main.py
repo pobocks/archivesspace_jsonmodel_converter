@@ -5,6 +5,7 @@ from .subjects import subjects_create
 from .resources import resources_create
 from .enumerations import convert_enums
 from .name_xwalk import crosswalk_names
+from .crosswalker import crosswalk_export
 
 
 CONFIG = None
@@ -18,6 +19,7 @@ def config(config_file):
 
 @click.group()
 @click.option('--config-file', help="Path to yaml configuration file")
+
 def main(config_file):
     config(config_file)
     setup_logging(**CONFIG['logging_config'])
@@ -53,3 +55,15 @@ def create_name_crosswalk():
     log.info("Name crosswalk")
     CONFIG.dynamic_configuration()
     crosswalk_names(CONFIG, log)
+    
+@click.command()
+@click.option('--csv-file', help="Path to an output csv file")
+@click.option('--xw-table', help="Name of a Crosswalk table")
+def export_crosswalk_table(csv_file, xw_table):
+    log = get_logger('main.export_crosswalk_table')
+    log.info(f"Exporting {xw_table} to {csv_file}")
+    CONFIG.dynamic_configuration()
+    crosswalk_export(CONFIG, log, csv_file, xw_table)
+    
+@main.add_command(export_crosswalk_table)
+

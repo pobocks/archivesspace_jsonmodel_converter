@@ -4,6 +4,8 @@ import sqlite3
 import traceback
 from os import path
 from .logger import get_logger
+import csv
+import sys
 log = get_logger('crosswalk')
 ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?)'
 UPDATE = 'UPDATE Crosswalk SET aspace_id=?, value=? WHERE orig_table=? AND orig_id=?'
@@ -13,6 +15,7 @@ UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
+FETCH_TABLE_CONTENTS = 'SELECT * FROM Crosswalk WHERE orig_table=?'
 
 class Crosswalk():
     def __init__(self, config):
@@ -122,3 +125,29 @@ class Crosswalk():
         cursorObj = self.conn.cursor()
         with self.conn:
             cursorObj.execute("DROP TABLE Crosswalk")
+    
+    def fetch_xwtable(self,table):
+        cursor = self.conn.cursor()
+        try:
+            with self.conn:
+                cursor.execute(FETCH_TABLE_CONTENTS, table)
+                for row in cursor:  
+                    yield(row)  
+        except sqlite3.Error as e:
+            log.error(f"Problem accessing table {table} with error ",error=e, exc_info=True )
+
+    def crosswalk_export(self, csv_file, table):
+        ''' export a Crosswalk table to a csvfile'''
+        try:
+            with open(csv_file, "w", newline='', encoding='utf-8') as outfile:
+                wr = csv.writer(outfile)
+                for row in fetch_xwtable(table):
+                    if row is not None:
+                        wr.writerow(row)
+        except Exception as e:
+            sys.exit(f"Problem found in writing to {csv_file}: {e.__class__.__doc__} [{e.__class__.__name__}]")
+
+                    
+            
+        
+    
