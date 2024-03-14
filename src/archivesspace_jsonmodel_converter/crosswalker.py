@@ -136,7 +136,7 @@ class Crosswalk():
         except sqlite3.Error as e:
             log.error(f"Problem accessing table {table} with error ",error=e, exc_info=True )
 
-    def crosswalk_export(self, csv_file, table):
+    def export_table(self, csv_file, table):
         ''' export a Crosswalk table to a csvfile'''
         try:
             with open(csv_file, "w", newline='', encoding='utf-8') as outfile:
@@ -145,8 +145,13 @@ class Crosswalk():
                     if row is not None:
                         wr.writerow(row)
         except Exception as e:
-            sys.exit(f"Problem found in writing to {csv_file}: {e.__class__.__doc__} [{e.__class__.__name__}]")
+            log.error(f"Problem found in writing to {csv_file}: {e.__class__.__doc__} [{e.__class__.__name__}]")
 
+'''called by main'''
+def crosswalk_export(config,csv_file, table):
+    xw = config["d"]["crosswalk"]
+    xw.export_table(csv_file, table)
+    
                     
             
         
