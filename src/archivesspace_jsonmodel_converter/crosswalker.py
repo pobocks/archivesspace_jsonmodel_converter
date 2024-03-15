@@ -15,7 +15,8 @@ UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
-FETCH_TABLE_CONTENTS = 'SELECT * FROM Crosswalk WHERE orig_table=?'
+FETCH_TABLE_CONTENTS = 'SELECT * FROM Crosswalk WHERE orig_table=? ORDER BY orig_id ASC'
+FETCH_TABLE_NAMES = 'SELECT DISTINCT orig_table FROM Crosswalk ORDER BY orig_id ASC'
 
 class Crosswalk():
     def __init__(self, config):
@@ -128,29 +129,46 @@ class Crosswalk():
     
     def fetch_xwtable(self,table):
         cursor = self.conn.cursor()
+        log.info(f'Exporting {table}')
         try:
             with self.conn:
-                cursor.execute(FETCH_TABLE_CONTENTS, table)
+                cursor.execute(FETCH_TABLE_CONTENTS, [table])
                 for row in cursor:  
                     yield(row)  
         except sqlite3.Error as e:
             log.error(f"Problem accessing table {table} with error ",error=e, exc_info=True )
 
-    def export_table(self, csv_file, table):
+    def export_table(self, log, csv_file, table):
         ''' export a Crosswalk table to a csvfile'''
         try:
             with open(csv_file, "w", newline='', encoding='utf-8') as outfile:
                 wr = csv.writer(outfile)
-                for row in fetch_xwtable(table):
+                for row in self.fetch_xwtable(table):
                     if row is not None:
                         wr.writerow(row)
         except Exception as e:
             log.error(f"Problem found in writing to {csv_file}: {e.__class__.__doc__} [{e.__class__.__name__}]")
+   
+    def list_tables(self,log):
+        cursor = self.conn.cursor()
+        log.info(f'Listing tables ')
+        try:
+            with self.conn:
+                cursor.execute(FETCH_TABLE_NAMES)
+                for row in cursor:
+                    log.info(row[0]) 
+        except sqlite3.Error as e:
+            log.error(f"Problem accessing table {table} with error ",error=e, exc_info=True )
 
 '''called by main'''
-def crosswalk_export(config,csv_file, table):
+def crosswalk_export(config, log, csv_file, table):
     xw = config["d"]["crosswalk"]
-    xw.export_table(csv_file, table)
+    xw.export_table(log, csv_file, table)
+    
+def crosswalk_list_tables(config, log):
+    print("we got to list xwalk tables")
+    xw = config["d"]["crosswalk"]
+    xw.list_tables(log)
     
                     
             

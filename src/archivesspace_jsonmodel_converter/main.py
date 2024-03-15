@@ -6,6 +6,7 @@ from .resources import resources_create
 from .enumerations import convert_enums
 from .name_xwalk import crosswalk_names
 from .crosswalker import crosswalk_export
+from .crosswalker import crosswalk_list_tables
 
 
 CONFIG = None
@@ -56,6 +57,13 @@ def create_name_crosswalk():
     CONFIG.dynamic_configuration()
     crosswalk_names(CONFIG, log)
     
+@main.command()
+def list_crosswalk_tables():
+    log = get_logger('main.list_xwalk_tables')
+    log.info("List Crosswalk Tables")
+    CONFIG.dynamic_configuration()
+    crosswalk_list_tables(CONFIG, log)
+    
 @click.command()
 @click.option('--csv-file', help="Path to an output csv file")
 @click.option('--xw-table', help="Name of a Crosswalk table")
@@ -65,5 +73,5 @@ def export_crosswalk_table(csv_file, xw_table):
     CONFIG.dynamic_configuration()
     crosswalk_export(CONFIG, log, csv_file, xw_table)
     
-@main.add_command(export_crosswalk_table)
+main.add_command(export_crosswalk_table)
 
