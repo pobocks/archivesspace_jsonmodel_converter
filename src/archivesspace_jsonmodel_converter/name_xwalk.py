@@ -42,6 +42,7 @@ def crosswalk_names(config, input_log):
     ct = 0
     try:
         xw.create_crosswalk()
+        xw.delete_table('Names')
         file_legit()
         with open(filepath, mode ='r', encoding='utf-8-sig') as file:  
         # reading csv file

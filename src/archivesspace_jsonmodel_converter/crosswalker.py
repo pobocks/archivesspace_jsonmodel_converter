@@ -15,8 +15,9 @@ UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
-FETCH_TABLE_CONTENTS = 'SELECT * FROM Crosswalk WHERE orig_table=? ORDER BY orig_id ASC'
+FETCH_TABLE_CONTENTS = 'SELECT orig_id, value, aspace_id FROM Crosswalk WHERE orig_table=? ORDER BY orig_id ASC'
 FETCH_TABLE_NAMES = 'SELECT DISTINCT orig_table FROM Crosswalk ORDER BY orig_id ASC'
+DELETE_TABLE = 'DELETE FROM Crosswalk WHERE orig_table=?'
 
 class Crosswalk():
     def __init__(self, config):
@@ -126,6 +127,12 @@ class Crosswalk():
         cursorObj = self.conn.cursor()
         with self.conn:
             cursorObj.execute("DROP TABLE Crosswalk")
+            
+    def delete_table(self, table):
+        cursorObj = self.conn.cursor()
+        with self.conn:
+            cursorObj.execute(DELETE_TABLE, [table])
+            log.info(f"Removed all of '{table}' ")
     
     def fetch_xwtable(self,table):
         cursor = self.conn.cursor()
