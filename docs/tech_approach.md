@@ -1,4 +1,5 @@
-﻿﻿﻿﻿﻿﻿﻿# Technical Approach
+﻿
+# Technical Approach
 
 The current home-grown system was developed in Microsoft **Access**(tm).  We have decided to convert that system _as-is_ into **PostgreSQL** as a first step.   We then run our **python**-based conversion scripts from there,  taking advantage of the [ArchivesSnake](https://github.com/archivesspace-labs/ArchivesSnake/) package that uses the ArchivesSpace API.
 
