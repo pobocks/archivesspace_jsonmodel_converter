@@ -1,6 +1,7 @@
 ''' Create a crosswalk for normalizing agent names using a spreadsheet'''
 import csv
 from csv import reader
+import re
 
 xw = None
 log = None
@@ -22,9 +23,9 @@ def file_legit():
         raise e
 def add_to_crosswalk(line):
     added = False
-    orig =line["original"] 
-    conv = line["convert"]
-    if conv.strip() != '':
+    orig = re.sub(r"\s+", " ", line["original"]).strip().strip(',')  # we'll strip and compress the originating name
+    conv = line["convert"].strip()
+    if conv != '':
         if xw.get_row('Names', conv) is None:
             xw.add_or_update('Names', conv, conv, '') # make sure that the convert-to name has an entry in the table
     else:
@@ -42,7 +43,7 @@ def crosswalk_names(config, input_log):
     ct = 0
     try:
         xw.create_crosswalk()
-        xw.delete_table('Names')
+        xw.delete_table(input_log, 'Names')
         file_legit()
         with open(filepath, mode ='r', encoding='utf-8-sig') as file:  
         # reading csv file
