@@ -7,6 +7,10 @@ from .enumerations import convert_enums
 from .name_xwalk import crosswalk_names
 from .crosswalker import crosswalk_export
 from .crosswalker import crosswalk_list_tables
+from .crosswalker import crosswalk_reinitialize
+from .crosswalker import crosswalk_delete_table
+
+from .agents import agents_create
 
 
 CONFIG = None
@@ -57,6 +61,8 @@ def create_name_crosswalk():
     CONFIG.dynamic_configuration()
     crosswalk_names(CONFIG, log)
     
+
+
 @main.command()
 def list_crosswalk_tables():
     log = get_logger('main.list_xwalk_tables')
@@ -64,6 +70,13 @@ def list_crosswalk_tables():
     CONFIG.dynamic_configuration()
     crosswalk_list_tables(CONFIG, log)
     
+@main.command()
+def reinitialize_crosswalk():
+    log = get_logger('main.xwalk_reinit')
+    CONFIG.dynamic_configuration()
+    crosswalk_reinitialize(CONFIG, log)
+    
+
 @click.command()
 @click.option('--csv-file', help="Path to an output csv file")
 @click.option('--xw-table', help="Name of a Crosswalk table")
@@ -72,6 +85,27 @@ def export_crosswalk_table(csv_file, xw_table):
     log.info(f"Exporting {xw_table} to {csv_file}")
     CONFIG.dynamic_configuration()
     crosswalk_export(CONFIG, log, csv_file, xw_table)
-    
+
 main.add_command(export_crosswalk_table)
+@click.command()
+@click.option('--really-create', is_flag=True, show_default=True, default=False, help="Actually create Aspace records")
+def create_agents(really_create): 
+    report_only = not really_create
+    log = get_logger('main.agents')
+    log.info("Create Agents")
+    CONFIG.dynamic_configuration()
+    agents_create(CONFIG, log, report_only)
+    
+main.add_command(create_agents)
+
+@click.command()
+@click.option('--xw-table', help="Name of a Crosswalk table")
+def delete_crosswalk_table(xw_table):
+    log = get_logger('main.delete_crosswalk_table')
+    log.info(f"Deleting {xw_table} ")
+    CONFIG.dynamic_configuration()
+    crosswalk_delete_table(CONFIG, log, xw_table)
+    
+main.add_command(delete_crosswalk_table)
+
 
