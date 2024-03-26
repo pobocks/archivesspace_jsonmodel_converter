@@ -122,13 +122,14 @@ class Crosswalk():
             aspace_id = row['aspace_id']
         return aspace_id
 
-    def drop_crosswalk(self):
+    def drop_crosswalk(self, log):
         '''Drop the Crosswalk table all together'''
         cursorObj = self.conn.cursor()
         with self.conn:
             cursorObj.execute("DROP TABLE Crosswalk")
+        log.info("Crosswalk reinitialized")
             
-    def delete_table(self, table):
+    def delete_table(self, log, table):
         cursorObj = self.conn.cursor()
         with self.conn:
             cursorObj.execute(DELETE_TABLE, [table])
@@ -165,7 +166,7 @@ class Crosswalk():
                 for row in cursor:
                     log.info(row[0]) 
         except sqlite3.Error as e:
-            log.error(f"Problem accessing table {table} with error ",error=e, exc_info=True )
+            log.error(f"Problem accessing tables with error ",error=e, exc_info=True )
 
 '''called by main'''
 def crosswalk_export(config, log, csv_file, table):
@@ -176,7 +177,13 @@ def crosswalk_list_tables(config, log):
     print("we got to list xwalk tables")
     xw = config["d"]["crosswalk"]
     xw.list_tables(log)
-    
+def crosswalk_delete_table(config, log,  table):
+    xw = config["d"]["crosswalk"]
+    xw.delete_table(log, table)   
+
+def crosswalk_reinitialize(config, log):
+    xw = config["d"]["crosswalk"]
+    xw.drop_crosswalk(log)
                     
             
         
