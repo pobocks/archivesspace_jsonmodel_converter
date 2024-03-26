@@ -35,6 +35,7 @@ def convert_enums(config, input_log):
     xw = config["d"]["crosswalk"]
     log = input_log
     ct = 0
+    log.info(f"Reading from file {filepath}")
     try:
         xw.create_crosswalk()
         file_legit()
