@@ -116,7 +116,6 @@ class Crosswalk():
     def get_aspace_id(self, orig_table, orig_id):
         ''' returns the ArchivesSpace URL corresponding to the original table/original ID mapping'''
         aspace_id = None
-
         row = self.get_row(orig_table, orig_id)
         if row:
             aspace_id = row['aspace_id']
@@ -174,7 +173,6 @@ def crosswalk_export(config, log, csv_file, table):
     xw.export_table(log, csv_file, table)
     
 def crosswalk_list_tables(config, log):
-    print("we got to list xwalk tables")
     xw = config["d"]["crosswalk"]
     xw.list_tables(log)
 def crosswalk_delete_table(config, log,  table):
