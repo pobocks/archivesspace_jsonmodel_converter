@@ -20,6 +20,7 @@
 import re
 import csv
 from asnake.jsonmodel import JM
+from .utils import get_name_from_xwalk, get_agent_uri
 
 NAME_QUERY= 'SELECT DISTINCT creator  from "tblcreator/place" ORDER_BY creator ASC'
 PARENS_GROUP = '\((.*?)\)'  # used in findall, so not compiled
@@ -138,10 +139,9 @@ def process_person_name(input_name):
     '''
     global xw
     # first, see if we've already processed this successfully
-    xwrow = xw.get_row('Names', input_name)
-    if xwrow is not None:
-        names = xwrow['value'].split('|')
-        return names
+    name = get_name_from_xwalk(xw, input_name)
+    if name is not None:
+        return [name]
     # ok, we don't have an entry in the names xwalk
     names = input_name.split(";")
     if '' in names:
@@ -154,25 +154,27 @@ def process_person_name(input_name):
     # look for "bad name" indicators
     bad_name = False
     for i in range(len(names)): 
-        name = names[i].strip()            
+        tmp = get_name_from_xwalk(xw, names[i])
+        if tmp is not None:
+            names[i] = tmp
+            continue          
         if len(name.split(',')) > 2:
             bad_name = True
             log.warn(f'Muliple commas found in {name} [{input_name}]')
             break
-        if name.find('(') != -1 or name.find(')') != -1:
+        elif name.find('(') != -1 or name.find(')') != -1:
             bad_name = True
             log.warn(f'Parenthesis found in {name} [{input_name}]')
             break
-        if ET_AL_PAT.search(name) is not None:
+        elif ET_AL_PAT.search(name) is not None:
             bad_name = True
             log.warn(f'"Editor", "et. al.","with", etc. at end of {name}? [{input_name}]')
-            break
-        
-        if len(name.split(' ')) > 2:
+            break       
+        elif len(name.split(' ')) > 2:
             bad_name = True
             log.warn(f'Suspected extraneous words found in {name} [{input_name}]')
             break
-        if ',' not in name and ' ' in name:
+        elif ',' not in name and ' ' in name:
             bad_name = True
             log.warn(f'Name {name} [{input_name}] missing comma; not in lastname, firstname order, or corporation?')
         names[i] = name
@@ -237,20 +239,22 @@ def process_agents():
         row = cur.fetchone()
         if row is None or row[0] is None:
             break
-        row_name = re.sub(r"\s+", " ", row[0]).strip().strip(',')
-        if 'unknown' in row_name.lower() or 'none' in row_name.lower():
-                log.warn(f'"None or unknown" detected in "{row_name}" ')
+        if 'unknown' in row[0].lower() or 'none' in row[0].lower():
+                log.warn(f'"None or unknown" detected in "{row[0]}" ')
                 continue
+        # if we have a uri already, we can stop right here!
+        agent_uri = get_agent_uri(xw, row[0])
+        if agent_uri is not None:
+            # further processing not needed!
+            log.debug(f"Have agent id for '{row[0]}'")
+            continue
         # first let's see if there's a match in the Names table
-        xwrow = xw.get_row('Names', row_name)
-        if xwrow is not None:
-            init_name = xwrow['value']
-            # if not (row_name == init_name):
-            #     log.debug(f"Found a match for [{row_name}] in the Names table as [{init_name}]")
-            crrow = xw.get_row('Creators', init_name)
-            if crrow is not None and crrow['aspace_id'] is not None:
-                log.debug(f"Found aspace_id [{crrow['aspace_id']}] for {row_name} that is converted to {init_name}")
-                continue # our work here is done!
+        init_name = get_name_from_xwalk(xw, row[0])
+        if init_name is None:
+            init_name = re.sub(r"\s+", " ", row[0]).strip().strip(',')
+            log.warning(f"'{init_name}' (item {row[4]}) not found in 'Names' table; skipping")
+            problem_list.append([ "missing",init_name, row[2],row[3], row[4]])
+            continue
          # skip the repeats
         if name == init_name:
             continue
@@ -259,25 +263,29 @@ def process_agents():
         is_person, is_conference, placejson = get_agent_info(row)
         # log.debug(f"[{init_name}]  ({row[1]}) is person: {is_person}, is conference: {is_conference}")
         if is_person is None:
-            log.error(f"Unable to continue to process '{row_name}' [{row[3]}] because cannot determine person or corporate")
+            log.error(f"Unable to continue to process '{row[0]}' [{row[3]}] because cannot determine person or corporate")
             continue  # stop right there and move on
         elif is_person:
             names = process_person_name(name)
-            if len(names) > 1:
-                log.info(f"'{row_name} contains more than one name")
+            if names is not None and len(names) > 1:
+                log.info(f"'{name} contains more than one name")
         else:
             names = [name]    # we don't really process corporate names
         if names is None:
             problem_list.append([ "name",init_name, row[1], row[3]], row[4])
             continue
+        
         for name in names:
-            namerow = xw.get_row("Names", name)
-            if namerow is not None:
-                if namerow['aspace_id'] != '':
-                    log.info(f"Name {name} already has an agent defined: {namerow['aspace_id']}")
-                    continue
-                else:
-                    name = namerow['value']
+            # log.debug(f"Processing '{name}' from'{init_name}")
+            aspace_id = get_agent_uri(xw, name)
+            if aspace_id is not None:
+                continue
+            tmp = get_name_from_xwalk(xw, name)
+            if tmp is None:
+                log.warn(f"Can't find '{name}' in Crosswalk; skipping")
+                continue  # we'll ignore these
+            else:
+                name = tmp
             # temp
             if len(name.split(" ")) > 1 and ',' not in name and is_person:
                 log.warn(f"[{name}] has is_person but seems to be a company?, [{row[1]}] [{row[3]}]")
