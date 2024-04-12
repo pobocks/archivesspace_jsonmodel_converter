@@ -7,15 +7,15 @@ from .logger import get_logger
 import csv
 import sys
 log = get_logger('crosswalk')
-ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?)'
-UPDATE = 'UPDATE Crosswalk SET aspace_id=?, value=? WHERE orig_table=? AND orig_id=?'
+ADD_NEW = 'INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id, misc) VALUES(?, ?, ?, ?, ?)'
+UPDATE = 'UPDATE Crosswalk SET aspace_id=?, value=? , misc=? WHERE orig_table=? AND orig_id=?'
 
-UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id) VALUES(?, ?, ?, ?) ON CONFLICT
+UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id, misc) VALUES(?, ?, ?, ?, ?) ON CONFLICT
             DO UPDATE SET value = excluded.value, aspace_id = excluded.aspace_id"""
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
-FETCH_TABLE_CONTENTS = 'SELECT orig_id, value, aspace_id FROM Crosswalk WHERE orig_table=? ORDER BY orig_id ASC'
+FETCH_TABLE_CONTENTS = 'SELECT orig_id, value, aspace_id, misc FROM Crosswalk WHERE orig_table=? ORDER BY orig_id ASC'
 FETCH_TABLE_NAMES = 'SELECT DISTINCT orig_table FROM Crosswalk ORDER BY orig_id ASC'
 DELETE_TABLE = 'DELETE FROM Crosswalk WHERE orig_table=?'
 
@@ -53,6 +53,7 @@ class Crosswalk():
                                                                 orig_id text,
                                                                 value text,
                                                                 aspace_id text,
+                                                                misc text,
                                                                 UNIQUE(orig_table,orig_id))""")
 
                     retval = True
@@ -61,25 +62,25 @@ class Crosswalk():
             log.error("Sqlite3 error: unable to create Crosswalk:", error=e, exc_info=True )
         return retval
 
-    def add_or_update(self, orig_table, orig_id, value, aspace_id):
+    def add_or_update(self, orig_table, orig_id, value, aspace_id, misc=None):
         '''Add a crosswalk row if it doesn't already exist; otherwise update'''
         cursorObj = self.conn.cursor()
-        entities = [orig_table, orig_id, value, aspace_id]
+        entities = [orig_table, orig_id, value, aspace_id, misc]
         retval = False
         try:
             with self.conn:
                 cursorObj.execute(ADD_NEW,entities)
                 self.conn.commit()
                 retval = True
-                log.info(f"Added to {orig_table} [{orig_id}] [{value}] [{aspace_id}]")
+                log.info(f"Added to {orig_table} [{orig_id}] [{value}] [{aspace_id}] [misc: {misc}]")
         except sqlite3.Error as e:
             if str(e).startswith('UNIQUE constraint failed'):
                 try:
                     with self.conn:
-                        cursorObj.execute(UPDATE, [aspace_id, value, orig_table, orig_id])
+                        cursorObj.execute(UPDATE, [aspace_id, value, misc, orig_table, orig_id])
                         self.conn.commit()
                         retval = True
-                        log.info(f"Updated {orig_table} [{orig_id}] [{value}] [{aspace_id}]")
+                        log.info(f"Updated {orig_table} [{orig_id}] [{value}] [{aspace_id}] [misc: {misc}]")
                 except sqlite3.Error as e:
                     log.error(f"Couldn't even update: {entities} with sqlite3 error ",error=e, exc_info=True )
             else:
