@@ -15,7 +15,7 @@ UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id, misc) V
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
-FETCH_TABLE_CONTENTS = 'SELECT orig_id, value, aspace_id, misc FROM Crosswalk WHERE orig_table=? ORDER BY orig_id ASC'
+FETCH_TABLE_CONTENTS = 'SELECT orig_id, value, aspace_id, misc FROM Crosswalk WHERE orig_table=? ORDER BY value ASC'
 FETCH_TABLE_NAMES = 'SELECT DISTINCT orig_table FROM Crosswalk ORDER BY orig_id ASC'
 DELETE_TABLE = 'DELETE FROM Crosswalk WHERE orig_table=?'
 
@@ -150,7 +150,8 @@ class Crosswalk():
         ''' export a Crosswalk table to a csvfile'''
         try:
             with open(csv_file, "w", newline='', encoding='utf-8') as outfile:
-                wr = csv.writer(outfile)
+                wr = csv.writer(outfile) #orig_id, value, aspace_id, misc
+                wr.writerow(["orig_id", "value", "aspace_id", "misc"])
                 for row in self.fetch_xwtable(table):
                     if row is not None:
                         wr.writerow(row)
