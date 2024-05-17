@@ -1,11 +1,20 @@
 # Archival objects
 from asnake.jsonmodel import JM
 from psycopg.rows import dict_row
+import openpyxl
+from openpyxl.styles import NamedStyle, Protection, Font, Border, Side
+from textwrap import dedent
 
+# Dynamic globals, set via config
 client = None
 xw = None
 conn = None
 log = None
+
+# Static globals
+tablename = 'tblitems'
+resource_tablename = 'tblcolls'
+dept_id = 48
 
 # Each AO needs:
 #   to be associated with its resource on creation
@@ -44,18 +53,22 @@ def process_archival_objects(tablename, resource_tablename, dept_id):
                 publish=True
             )
 
+def setup_globals(config, input_log, which={'aspace', 'xw', 'conn', 'log'}):
+    global client, xw, conn, log
+    if 'log' in which:
+        log = input_log
+    if 'aspace' in which:
+        client = config['d']['aspace']
+        client.authorize()
+    if 'xw' in which:
+        xw = config['d']['crosswalk']
+        xw.create_crosswalk()
+    if 'conn' in which:
+        conn = config['d']['postgres']
+
 good_statii = frozenset(('Created', 'Updated',))
 def archival_objects_create(config, input_log):
-    global client, xw, conn, log
-    log = input_log
-    client = config['d']['aspace']
-    client.authorize()
-    xw = config['d']['crosswalk']
-    xw.create_crosswalk()
-    conn = config["d"]["postgres"]
-    tablename = 'tblitems'
-    resource_tablename = 'tblcolls'
-    dept_id = 48
+    setup_globals(config, input_log)
     for collid, orig_id, json in process_archival_objects(tablename, resource_tablename, dept_id):
         ao_id = xw.get_aspace_id(tablename, orig_id)
         if ao_id is not None:
@@ -78,3 +91,76 @@ def archival_objects_create(config, input_log):
                 log.error(f"Error detected for ID {orig_id} in {tablename}",error=error)
         else:
             log.error(f"Collection {orig_id} in {tablename} not created for unknown reasons", error=res)
+
+def produce_excel_template(config, null_itemname_only, batch_size, output, input_log):
+    setup_globals(config, input_log, {'conn', 'log'})
+
+    locked = Protection(locked=True, hidden=False)
+
+    header_style = NamedStyle(name='header')
+    header_style.font = Font(bold=True)
+    header_style.protection = locked
+
+    desc_style = NamedStyle(name='desc')
+    desc_style.protection = locked
+    side = Side(style="thick", color="000000")
+    desc_style.border = Border(bottom=side)
+
+    locked_style = NamedStyle(name='locked')
+    locked_style.protection = locked
+
+    styles = {header_style, desc_style, locked_style}
+
+    headers = {
+        'itemid': 'item identifier',
+        'itemname': 'name field, used as ASpace title by default',
+        'itemdesc': 'description of item',
+        'title': 'title field, NOT ASpace title',
+        'collid': 'db id of collection',
+        'col##': 'human readable collection id',
+        'collection title': 'title of collection',
+        'title_override': 'Edit this to supply item title',
+        'collection_override': 'Edit this to associate record with a collection whose title/EADID will be set to this'
+    }
+
+    sql_base = dedent(f"""\
+    SELECT itemid, itemname, itemdesc, title, {tablename}.collid, "coll##", "collection title"
+    FROM tblitems
+    LEFT JOIN {resource_tablename} ON {tablename}.collid = {resource_tablename}.collid
+    WHERE deptcodeid = {dept_id}
+    {'AND itemname IS NULL' if null_itemname_only else ''}
+    ORDER BY {tablename}.collid, itemid""")
+    with conn.cursor() as cur:
+        if batch_size:
+            cur.arraysize = batch_size
+        cur.execute(sql_base)
+        method_to_use = 'fetchmany' if batch_size else 'fetchall'
+
+        # Filename handling for output
+        suffix = 0
+        parts = [output, '', ".xlsx"] # initial xlsx has no suffix
+
+        while rows := getattr(cur, method_to_use)():
+            wb = openpyxl.Workbook()
+            for style in styles:
+                wb.add_named_style(style)
+            ws = wb.active
+            ws.append(list(headers.keys()))
+            ws.append(list(headers.values()))
+            for cell in ws[1]:
+                cell.style = 'header'
+            for cell in ws[2]:
+                cell.style = 'desc'
+            counter = 0
+            for row in rows:
+                counter += 1
+                if counter % 100 == 0:
+                    log.info('100 rows processed')
+                ws.append(row)
+                for cell in ws[ws.max_row]:
+                    cell.style = 'locked'
+            wb.save("".join(parts))
+            log.info(f"Saved {''.join(parts)}")
+            # Only relevant in batched mode
+            suffix += 1
+            parts[1] = f"_{suffix:02}"

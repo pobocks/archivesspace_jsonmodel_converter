@@ -3,7 +3,7 @@ from .logger import setup_logging, get_logger
 from .configurator import AJCConfig
 from .subjects import subjects_create
 from .resources import resources_create
-from .archival_objects import archival_objects_create
+from .archival_objects import archival_objects_create, produce_excel_template
 from .enumerations import convert_enums
 from .name_xwalk import crosswalk_names
 
@@ -56,6 +56,16 @@ def create_archival_objects():
 
     CONFIG.dynamic_configuration()
     archival_objects_create(CONFIG, log)
+
+@main.command()
+@click.option('--null-itemname-only', '-n', is_flag=True, default=False, help="Omit records with itemName defined")
+@click.option('--batch-size', '-b', default=None, type=int, help="batch into different files with INTEGER records each")
+@click.option('--output', '-o', prompt="Filename for excel?", type=click.Path(exists=False), help="filename to use for output, multiple batches will have an integer appended")
+def make_ao_template(null_itemname_only, batch_size, output):
+    log = get_logger('main.make_ao_template')
+    log.info('Make AO Excel template')
+    CONFIG.dynamic_configuration()
+    produce_excel_template(CONFIG, null_itemname_only, batch_size, output, log)
 
 @main.command()
 def create_name_crosswalk():
