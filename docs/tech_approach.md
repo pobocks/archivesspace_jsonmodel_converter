@@ -29,6 +29,7 @@ Currently this database contains only the **Crosswalk** table:
 | orig_id | text | the ID in the originating table * |
 | value | text | the text value in the originating table * |
 | aspace_id | text | for enumerators, the enum value; otherwise the full ArchivesSpace URL* |
+| misc | text | an additional information field for some tables* |
 
 All interactions with the database are managed by the  **Crosswalk** class defined in [crosswalk.py](../src/archivesspace_jsonmodel_converter/crosswalker.py)
 
