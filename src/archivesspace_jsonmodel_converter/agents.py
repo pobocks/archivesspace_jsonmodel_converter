@@ -34,6 +34,7 @@ xw = None
 conn = None # postgres connection
 log = None
 problem_list = []  # [problem_type, name, creatortype_id, creatortype_value]  problem type: "type" | "corp?" | "name"
+missing_list = {}
 report_only = True
 
 def create_per_name_json(name):
@@ -253,6 +254,8 @@ def process_agents():
         if init_name is None:
             init_name = re.sub(r"\s+", " ", row[0]).strip().strip(',')
             log.warning(f"'{init_name}' (item {row[4]}) not found in 'Names' table; skipping")
+            if init_name not in missing_list:
+                missing_list[init_name] = row[3]
             problem_list.append([ "missing",init_name, row[2],row[3], row[4]])
             continue
          # skip the repeats
@@ -311,7 +314,14 @@ def process_agents():
     if errctr > 0:
         log.warn(f"At least {errctr} errors detected while creating json objects")
         
-            
+def write_missing_files(filepath):
+    headerlist = ["orig","convert", "type"]  
+    with open(filepath, "w", newline='', encoding='utf-8') as myfile:
+        wr = csv.writer(myfile)
+        wr.writerow(headerlist)
+        for name in missing_list:
+            wr.writerow([name, "", missing_list[name]])  
+                 
 def write_problems_file(filepath):
     headerlist = ["type","name", "type_id","type_value", "itemId"]
     with open(filepath, "w", newline='', encoding='utf-8') as myfile:
@@ -330,10 +340,13 @@ def agents_create(config, input_log, only_report):
     xw = config["d"]["crosswalk"]
     xw.create_crosswalk()
     conn = config["d"]["postgres"]
-    problem_output_filepath =  config["agents_config"]["filepath"]
+    problem_output_filepath =  config["agents_config"]["problem_filepath"]
+    missing_output_filepath = config["agents_config"]["missing_filepath"]
     process_agents()
     if len(problem_list) > 0:
         write_problems_file(problem_output_filepath)
+    if len(missing_list) > 0:
+        write_missing_files(missing_output_filepath)
     if conn:
         conn.close()
         
