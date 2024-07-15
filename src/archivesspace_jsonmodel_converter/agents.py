@@ -224,8 +224,7 @@ def get_agent_info(row):
             placejson = create_place_json(place)
             # log.debug(f"Creating a place {place}")
     return([is_person, is_conference, placejson])
-     
-        
+   
 def process_agents():
     # need to talk to xw
     # to get creator place from 'tblCreatorPlaces' and row from 'Enums'
