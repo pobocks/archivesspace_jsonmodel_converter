@@ -26,6 +26,7 @@ setuptools.setup(
         "boltons>=21.0.0,<22",
         "click>=8.1.3,<9",
         "structlog>=21.1.0,<22",
+        "openpyxl>=3.1.2,<4",
         "python-json-logger>=2.0.2,<3",
         "pytest>=7.0.1,<8",
         "python-dotenv>0.19.0,<=0.19.1",
