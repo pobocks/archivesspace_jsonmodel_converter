@@ -22,9 +22,16 @@ dept_id = 48
 #   TODO to be associated with its accession on creation
 #   TODO that accession to be added to its instances
 
+def construct_title(row):
+    output = f"{row['itemname'] or 'Unnamed'} - "
+    output += row['title'] or 'Untitled'
+    return output
+
 # Required AO Fields:
 #  THEORETICALLY only title, resource, and level
-def process_archival_objects(tablename, resource_tablename, dept_id):
+def process_archival_objects(tablename, resource_tablename, dept_id, hooks=None):
+    if not hooks:
+        hooks = []
     with conn.cursor(row_factory=dict_row) as cur:
         # get a count
         cur.execute(f'''SELECT COUNT(*) FROM "{tablename}"
@@ -32,26 +39,48 @@ def process_archival_objects(tablename, resource_tablename, dept_id):
         count = cur.fetchone()['count']
         log.info(f"Processing {count} archival objects in table {tablename}")
         for row in cur.execute(
-                f'''SELECT collid, itemid, title, itemdesc
+                f'''SELECT collid,
+                           itemid,
+                           itemname,
+                           title,
+                           itemdesc
                     FROM {tablename}
                     WHERE collid IS NOT null
+                      AND itemid !~* '^[L|R]'
                       AND deptcodeid = {dept_id}
                  ORDER BY collid ASC, datecreated ASC'''):
             aid = xw.get_aspace_id(resource_tablename, row["collid"])
             if aid is None:
                 log.error(f"Resource with original collid of {row['collid']} missing from crosswalk for item {row['itemid']}, skipping")
                 continue
-            yield row['collid'], row['itemid'], JM.archival_object(
+            record_json = JM.archival_object(
                 component_id=row['itemid'],
-                title=row['title'],
+                title=construct_title(row),
                 level="item",
                 resource={"ref":aid},
                 external_ids=[
                     JM.external_id(external_id="COLLID: " + str(row['collid']), source="access"),
                     JM.external_id(external_id=str(row['itemid']), source="access")
                 ],
-                publish=True
-            )
+                publish=True)
+            if row['itemdesc']:
+                record_json['notes'] = [
+                    JM.note_singlepart(
+                        type="abstract",
+                        label="Abstract from itemdesc",
+                        content=[
+                            row['itemdesc']
+                        ],
+                        publish=True
+                    )
+                ]
+            # Code to alter the archival object or link it to other records goes here, or
+            # can be passed in the hooks argument, in which case it should have the following signature:
+            #   def hook(tablename, resource_tablename, dept_id, json, row) -> dict
+            # and make global references as needed, and return the altered record_json
+            for hook in hooks:
+                record_json = hook(tablename, resource_tablename, dept_id, record_json, row)
+            yield row['collid'], row['itemid'], record_json
 
 def setup_globals(config, input_log, which={'aspace', 'xw', 'conn', 'log'}):
     global client, xw, conn, log
@@ -128,6 +157,7 @@ def produce_excel_template(config, null_itemname_only, batch_size, output, input
     FROM tblitems
     LEFT JOIN {resource_tablename} ON {tablename}.collid = {resource_tablename}.collid
     WHERE deptcodeid = {dept_id}
+    AND itemid !~* '^[L|R]'
     {'AND itemname IS NULL' if null_itemname_only else ''}
     ORDER BY {tablename}.collid, itemid""")
     with conn.cursor() as cur:
