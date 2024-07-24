@@ -32,7 +32,7 @@ setuptools.setup(
         "python-dotenv>0.19.0,<=0.19.1",
         "requests >=2.27.1,<3",
         "psycopg >=3.1.4,<4",
-        "typing_extensions==4.4.0",
+        "typing_extensions==4.8.0",
         "archivessnake >=0.9.1"
     ],
     python_requires=">=3.7"
