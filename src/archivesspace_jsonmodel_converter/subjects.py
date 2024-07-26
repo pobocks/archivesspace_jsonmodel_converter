@@ -21,17 +21,25 @@ def add_to_aspace(tablename, orig_id, subject, aid):
     ''' Add/update a subject to ArchivesSpace'''
     aspace_id = None
     response = None
-    subj = None
+    asubj = None
     if aid is not None:
         try:
-            subj = client.get(aid).json()
-            subject['lock_version'] = subj['lock_version']
-            for inx, term in enumerate(subj['terms']):
-                if inx < len(subject['terms']) and term['term'] == subject['terms'][inx]['term']:
-                    subject['terms'][inx]['lock_version'] = term['lock_version']
+            asubj = client.get(aid)
+            if asubj.status_code == 200:
+                subj = asubj.json()
+                subject['lock_version'] = subj['lock_version']
+                log.info(f"subject lock version: {subj['lock_version']}")
+                for inx, term in enumerate(subj['terms']):
+                    if inx < len(subject['terms']) and term['term'] == subject['terms'][inx]['term']:
+                        subject['terms'][inx]['lock_version'] = term['lock_version']
+                        log.info(f"\tterm lock: {term['lock_version']}")
+            else:
+                log.warn(f"URI {aid} not found")
+                aid = None
         except Exception as e:
-            log.error(f'unable to correctly retrieve lock_version for uri {aid}') 
-            return None               
+            log.error(f"unable to correctly retrieve lock_version for uri {aid} asubj: {asubj}") 
+            return None
+    if aid is not None:               
         response = client.post(aid, json=subject).json()
     else:
         response = client.post('subjects', json=subject).json()
@@ -80,43 +88,54 @@ def create_subject_json(orig_subj, firstfield, source ):
     subject = JM.subject(publish="true", source=source, vocabulary="/vocabularies/1", terms=terms)
     return subject
 
+# does the actual walking of the postgres db
+def walk_db(tablename, firstfield, source, select, cur):
+    ct = 0
+    cur.execute(select)
+    while True:
+        row = cur.fetchone()
+        if row == None or len(row) < 2:
+            break
+        orig_id = row[0]
+        orig_val = row[1]
+        if orig_val is None:
+            log.warn(f"Original ID {orig_id} in {tablename} has 'None' as a value!")
+            break
+        try:
+            subject = create_subject_json(orig_val, firstfield, source)
+            aid = xw.get_aspace_id(tablename, orig_id)
+            aspace_id = add_to_aspace(tablename, orig_id, subject, aid)
+            if aspace_id is not None:
+                added = xw.add_or_update(tablename, orig_id,orig_val,aspace_id)
+                if added:
+                    ct = ct + 1
+            #TODO: what do we do with None aspace_ids?
+            else:
+                log.warn(f"{orig_id} in {tablename} ({orig_val}) was not converted")
+        except Exception as e:
+            traceback.print_exc(e)
+            log.error(f"Exception  triggered on {orig_id} ({orig_val}), which will not be converted", error=e)
+    return(ct)
+
 def process_subjects(tablename, firstfield, source):
     ''' Take the values and add them to ArchivesSpace '''
     if conn is None:
         log.error("No conn in process subjects")
         return None
-    ct = 0
+    selectct = f"SELECT COUNT(*) from {tablename}"
+    select = f"SELECT * from {tablename}"
+    if tablename == "tblLookupValues":
+        selectct = "select count(*) from tbllookupvalues where lookuptypeid in (select lookuptypeid from tbllookuptypes where lookuptype='Genre')"
+        select = "select lookupvalueid,lookupvalue from tbllookupvalues where lookuptypeid in (select lookuptypeid from tbllookuptypes where lookuptype='Genre')"
     try:
         # create a cursor
         cur = conn.cursor()
         # get a count
-        cur.execute(f"SELECT COUNT(*) from {tablename}")
+        cur.execute(selectct)
         count = cur.fetchone()
         log.info(f"Table {tablename} has {count[0]} entries")
-        cur.execute(f"SELECT * from {tablename}")
-        while True:
-            row = cur.fetchone()
-            if row == None or len(row) < 2:
-                break
-            orig_id = row[0]
-            orig_val = row[1]
-            if orig_val is None:
-                log.warn(f"Original ID {orig_id} in {tablename} has 'None' as a value!")
-                break
-            try:
-                subject = create_subject_json(orig_val, firstfield, source)
-                aid = xw.get_aspace_id(tablename, orig_id)
-                aspace_id = add_to_aspace(tablename, orig_id, subject, aid)
-                if aspace_id is not None:
-                    added = xw.add_or_update(tablename, orig_id,orig_val,aspace_id)
-                    if added:
-                        ct = ct + 1
-                #TODO: what do we do with None aspace_ids?
-                else:
-                    log.warn(f"{orig_id} in {tablename} ({orig_val}) was not converted")
-            except Exception as e:
-                traceback.print_exc(e)
-                log.error(f"Exception  triggered on {orig_id} ({orig_val}), which will not be converted", error=e)
+        ct = walk_db(tablename, firstfield, source, select, cur)
+        
     except Exception as e:
         log.error("Unexpected exception", error=e,exc_info=True)
     log.info(f"{ct} entries processed correctly")
@@ -131,7 +150,7 @@ def subjects_create(config,input_log):
     xw.create_crosswalk()
     conn = config["d"]["postgres"]
  #   log = config["d"]["subjectlog"]
-    for table in ("tblLcshs,a,lcsh", "tblGeoPlaces,c,lcsh", "tblCreatorPlaces,c,local"):
+    for table in ("tblLcshs,a,lcsh", "tblGeoPlaces,c,lcsh", "tblCreatorPlaces,c,local", "tblLookupValues,v,local"):
         x = table.split(',')
         process_subjects(x[0],x[1], x[2])
     if conn:
