@@ -11,10 +11,12 @@
   This script processes creator names by the following rules:
     1. determine whether the name belongs to a person or a corporation
     2. determine if the "name" represents multiple entities (if so, write to a csv file)
-    3. lookup the name in the creators crosswalk; if it's there, we're done
+    3. lookup the name in the creators crosswalk; 
     4. lookup the name in the name crosswalk table; if it exists, grab the "convert to" name
-    5. lookup the convert to name to see if there already is an archivesspace ID; if so, we're done with that name
-    6. if there is no agent id, create a new agent.
+    5. lookup the convert to name to see if there already is an archivesspace ID
+    6. If there's an agent_id in the crosswalk, confirm it exists; if so, if there isn't an agent_place to add, we're done.  If we do need to add an agent_place, prepare for updating
+    7.  Add or update the agent json; put agent_id in the crosswalk
+    
     
 '''
 import re
@@ -81,16 +83,35 @@ def create_corp_json(nmjson, placejson):
         agent_places=[placejson] , publish=True )
     return corp
 
-def add_to_aspace(orig_value,  agent):
+def modified_agent_json(name, agent):
+    # check to see if the agent already exists, whether need to add a placejson
+    aspace_id = get_agent_uri(xw,name)
+    if aspace_id:
+        old = client.get(aspace_id)
+        if old.status_code !=  200:
+            return None
+        oldj = old.json()
+        if agent['agent_places'] and  not oldj['agent_places']:
+            oldj['agent_places'] = agent['agent_places']
+            log.warn(f"Adding agent places to already created agent {aspace_id}")
+        return(aspace_id, oldj)
+  
+            
+            
+def add_to_aspace(name,  agent):
     ''' Add an agent  to ArchivesSpace'''
     aspace_id = None
     response = None
     ag = None
     type = 'agents/people'
-    if agent['jsonmodel_type'] == 'agent_corporate':
-        type = 'agents/corporate_entities'
-    response = client.post(type, json=agent).json()
-    if 'status' in response and response['status'] == 'Created':
+    mods = modified_agent_json(name, agent)
+    if mods:
+        response = client.post(mods[0], json=mods[1]).json()
+    else:
+        if agent['jsonmodel_type'] == 'agent_corporate':
+            type = 'agents/corporate_entities'
+        response = client.post(type, json=agent).json()
+    if 'status' in response and response['status'] in ['Created', 'Updated']:
         aspace_id = response['uri']
     elif 'error' in response:
         err = response['error']
@@ -102,9 +123,9 @@ def add_to_aspace(orig_value,  agent):
             error = err
             if 'source' in err:
                 error = err['source'][0]
-            log.error(f"Error detected for {orig_value}: {error}\n json is:\n{agent}")
+            log.error(f"Error detected for {name}: {error}\n json is:\n{agent}")
     else:
-        log.error(f"Item {orig_value} not created for unknown reasons: {response}")
+        log.error(f"Item {orig_valuname} not created for unknown reasons: {response}")
     return aspace_id
 
 def create_agent_json(name,is_person, is_conference, placejson):
