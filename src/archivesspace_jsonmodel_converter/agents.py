@@ -125,7 +125,7 @@ def add_to_aspace(name,  agent):
                 error = err['source'][0]
             log.error(f"Error detected for {name}: {error}\n json is:\n{agent}")
     else:
-        log.error(f"Item {orig_valuname} not created for unknown reasons: {response}")
+        log.error(f"Item {name} not created for unknown reasons: {response}")
     return aspace_id
 
 def create_agent_json(name,is_person, is_conference, placejson):
