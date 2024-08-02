@@ -7,7 +7,7 @@ import traceback
 # Create and authorize the client
 
 #need from tblLcshs and tblGeoPlaces
-pattern =  "\|([a-z])"
+pattern =  r"\|([a-z])"
 
 # HARDCODED DICTIONARY for LCSH subfields
 SUBFIELD_DICT = {"a": "topical", "b": "topical", "c" : "geographic", "d": "temporal", "v": "genre_form", "x": "topical", "y": "temporal", "z": "geographic"}
@@ -37,9 +37,9 @@ def add_to_aspace(tablename, orig_id, subject, aid):
                 log.warn(f"URI {aid} not found")
                 aid = None
         except Exception as e:
-            log.error(f"unable to correctly retrieve lock_version for uri {aid} asubj: {asubj}") 
+            log.error(f"unable to correctly retrieve lock_version for uri {aid} asubj: {asubj}")
             return None
-    if aid is not None:               
+    if aid is not None:
         response = client.post(aid, json=subject).json()
     else:
         response = client.post('subjects', json=subject).json()
@@ -139,7 +139,7 @@ def process_subjects(tablename, firstfield, source):
         count = cur.fetchone()
         log.info(f"Table {tablename} has {count[0]} entries")
         ct = walk_db(tablename, firstfield, source, select, cur)
-        
+
     except Exception as e:
         log.error("Unexpected exception", error=e,exc_info=True)
     log.info(f"{ct} entries processed correctly")
