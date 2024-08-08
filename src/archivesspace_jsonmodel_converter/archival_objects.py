@@ -1,4 +1,5 @@
 # Archival objects
+import re
 from asnake.jsonmodel import JM
 from psycopg.rows import dict_row
 import openpyxl
@@ -27,6 +28,75 @@ def construct_title(row):
     output += row['title'] or 'Untitled'
     return output
 
+def process_note(itemid, note):
+    # notes may be assigned labels if there is a 'From Legacy' prefix
+    # all notes are set with Publish=True except for those 
+    # whose 'From Legacy' type is in the nonpublics array
+    pattern = "(From Legacy \[([A-Za-z0-9#/]+)\]:)"
+    labels = {'Bio#/HistoricalNote': '','OtherNotes': 'Other Note', 
+              'GeneralNote500': 'General Note',  'ActionNote583': 'Action Note',
+              'ReproductionNote': 'Reproduction Note' }
+    nonpublics = ['ActionNote583', 'ReproductionNote']
+    notes = []
+    ns = note.splitlines() # new line/CR indicates a separate note
+    for n in ns:
+        notetype = 'odd' # default
+        publish = True # default
+        label = '' # default
+        m = re.search(pattern, n)
+        if m:
+            try:
+                text = n[m.end():]
+                type = m.group(2)
+                if type == 'Bio#/HistoricalNote':
+                    notetype = 'bioghist'
+                elif type not in labels:
+                    log.warn(f"For item {itemid} notes, a 'From Legacy' note was found with an unexpected type [{type}] ")
+                    text = f"{type}: {text}"
+                if type in nonpublics:
+                    public = False
+                if type in labels:
+                    label = labels[type]
+            except Exception as e:
+                log.error(f"Error handling 'Legacy From' note [{n}] for itemid {itemid}")
+                text = n
+        else:
+            text = n
+        textjsn = JM.note_text(content=text.strip(), publish=publish)
+        multijsn = JM.note_multipart(type=notetype,subnotes=[textjsn], publish=publish)
+        if label:
+            multijsn['label'] = label
+        notes.append(multijsn)
+    return notes
+        
+        
+    
+
+def get_subjects(itemid, genreid):
+    subjects = []
+    tables = {'tblitemlcshs': 'tblLcshs', 'tblitemgeoplaces': 'tblGeoPlaces' , 'tblcreator/place': 'tblCreatorPlaces'}    
+    if genreid:
+        aid = xw.get_aspace_id('tblLookupValues', genreid)
+        if aid is not None:
+            subjects.append({'ref': aid})      
+    for tablename in tables.keys():
+        with conn.cursor() as cur:
+            for row in cur.execute(
+                f'''SELECT *
+                    FROM "{tablename}"
+                    WHERE itemid=\'{itemid}\''''):
+                if tablename == 'tblcreator/place':
+                    orig_id = row[4]
+                else:
+                    orig_id = row[1]
+                if orig_id:
+                    aid = xw.get_aspace_id(tables[tablename], orig_id)
+                    if not aid:
+                        log.warning(f"Aspace ID not found for item {itemid} subject {tablename} value {orig_id}")
+                    else:
+                        subjects.append({'ref': aid})                                           
+    return subjects
+
 # Required AO Fields:
 #  THEORETICALLY only title, resource, and level
 def process_archival_objects(tablename, resource_tablename, dept_id, hooks=None):
@@ -43,7 +113,9 @@ def process_archival_objects(tablename, resource_tablename, dept_id, hooks=None)
                            itemid,
                            itemname,
                            title,
-                           itemdesc
+                           itemdesc,
+                           genreid,
+                           itemnote
                     FROM {tablename}
                     WHERE collid IS NOT null
                       AND itemid !~* '^[L|R]'
@@ -63,8 +135,10 @@ def process_archival_objects(tablename, resource_tablename, dept_id, hooks=None)
                     JM.external_id(external_id=str(row['itemid']), source="access")
                 ],
                 publish=True)
+            record_json['subjects'] = get_subjects(row['itemid'], row['genreid'])
+            notes = []
             if row['itemdesc']:
-                record_json['notes'] = [
+                notes = [
                     JM.note_singlepart(
                         type="abstract",
                         label="Abstract from itemdesc",
@@ -74,6 +148,10 @@ def process_archival_objects(tablename, resource_tablename, dept_id, hooks=None)
                         publish=True
                     )
                 ]
+            if row['itemnote']:
+                notes.extend(process_note(row['itemid'], row['itemnote']))
+            if notes:
+                record_json['notes'] = notes
             # Code to alter the archival object or link it to other records goes here, or
             # can be passed in the hooks argument, in which case it should have the following signature:
             #   def hook(tablename, resource_tablename, dept_id, json, row) -> dict
