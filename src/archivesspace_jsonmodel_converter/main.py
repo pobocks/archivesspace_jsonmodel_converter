@@ -5,7 +5,6 @@ from .subjects import subjects_create
 from .resources import resources_create
 from .archival_objects import archival_objects_create, produce_excel_template
 from .enumerations import convert_enums
-from .name_xwalk import crosswalk_names
 from .crosswalker import crosswalk_export
 from .crosswalker import crosswalk_list_tables
 from .crosswalker import crosswalk_reinitialize
