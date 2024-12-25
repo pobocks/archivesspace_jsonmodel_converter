@@ -13,6 +13,7 @@ UPDATE = 'UPDATE Crosswalk SET aspace_id=?, value=? , misc=? WHERE orig_table=? 
 UPSERT = """INSERT INTO Crosswalk(orig_table, orig_id, value, aspace_id, misc) VALUES(?, ?, ?, ?, ?) ON CONFLICT
             DO UPDATE SET value = excluded.value, aspace_id = excluded.aspace_id"""
 FETCH_ROW = 'SELECT * FROM Crosswalk WHERE orig_table=? AND orig_id=?'
+FETCH_ROW_BY_VALUE = 'SELECT * FROM Crosswalk WHERE orig_table=? AND value=?'
 FETCH = 'SELECT aspace_id FROM Crosswalk WHERE orig_table=? AND orig_id=?'
 FETCH_BY_AID = 'SELECT * FROM Crosswalk WHERE aspace_id=?'
 FETCH_TABLE_CONTENTS = 'SELECT orig_id, value, aspace_id, misc FROM Crosswalk WHERE orig_table=? ORDER BY value ASC'
@@ -101,6 +102,19 @@ class Crosswalk():
 
         return row
     
+    def get_row_by_value(self, orig_table, value):
+        '''Returns the first row corresponding to the value'''
+        cursorObj = self.conn.cursor()
+        row = None
+        try:
+            with self.conn:
+                cursorObj.execute(FETCH_ROW_BY_VALUE, [orig_table, value])
+                row = cursorObj.fetchone() # index ensures uniqueness so this is sole result or None
+        except sqlite3.Error as e:
+            log.error(f"Unable to retrieve id for {orig_table}, {value} with sqlite3 error", error=e)
+
+        return row
+    
     def get_row_by_aspace_id(self, aspace_id):
         '''Returns the row corresponding to the aspace_id'''
         cursorObj = self.conn.cursor()
@@ -121,7 +135,23 @@ class Crosswalk():
         if row:
             aspace_id = row['aspace_id']
         return aspace_id
-
+    '''
+    Given a 'table' name, the colums that distinct operates on,  and an optional addition to the WHERE clause (plus any order by), yield the rows that satisfy the expression
+    '''
+    def fetch_rows(self, log, table, suffix=None):
+        log.debug(f"Fetching rows from '{table}' with expression '{suffix}'")
+        fetch = f"SELECT * FROM Crosswalk WHERE orig_table='{table}'"
+        if suffix is not None:
+            fetch = fetch + f" and {suffix}"
+        cursor = self.conn.cursor()        
+        try:
+            with self.conn:
+                cursor.execute(fetch)
+                for row in cursor:  
+                    yield(row)  
+        except sqlite3.Error as e:
+            log.error(f"Problem executing expression '{fetch}'' with error ",error=e, exc_info=True )
+            
     def drop_crosswalk(self, log):
         '''Drop the Crosswalk table all together'''
         cursorObj = self.conn.cursor()

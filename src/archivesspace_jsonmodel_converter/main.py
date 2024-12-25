@@ -73,12 +73,6 @@ def make_ao_template(null_itemname_only, batch_size, output):
     CONFIG.dynamic_configuration()
     produce_excel_template(CONFIG, null_itemname_only, batch_size, output, log)
 
-@main.command()
-def create_name_crosswalk():
-    log = get_logger('main.xwalk_names')
-    log.info("Name crosswalk")
-    CONFIG.dynamic_configuration()
-    crosswalk_names(CONFIG, log)
 
 @main.command()
 def whole_shebang():
@@ -87,7 +81,6 @@ def whole_shebang():
     CONFIG.dynamic_configuration()
     subjects_create(CONFIG, log)
     convert_enums(CONFIG, log)
-    crosswalk_names(CONFIG, log)
     resources_create(CONFIG, log)
     archival_objects_create(CONFIG, log)
     

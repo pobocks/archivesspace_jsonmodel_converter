@@ -2,19 +2,19 @@
 '''Currently only contains functions for agents, but may later include other functions'''
 import re
 
-def get_name_from_xwalk(xw,input_name):
+# The 'Names' table contains the crosswalk between typo-fyed names and
+# the name determined by the client
+def get_real_name_from_xwalk(xw,input_name, log):
     if input_name is None:
         return None
-    name = re.sub(r"\s+", " ", input_name).strip().strip(',')
-    row = xw.get_row('Names', name)
+    row = xw.get_row_by_value('Names', input_name)
+    
     if row is None:
         return None
-    return row['value']
+    return row['orig_id']
 
-def get_agent_uri(xw, input_name):
+def get_agent_uri(xw, name, log):
     uri = None
-    name = get_name_from_xwalk(xw, input_name)
-    if name is not None:
-        uri = xw.get_aspace_id('Creators', name)
+    uri = xw.get_aspace_id('Creators', name)
     return uri
     
