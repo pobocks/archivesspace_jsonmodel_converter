@@ -79,7 +79,7 @@ if __name__ == "__main__":
                 try:
                     if add_to_crosswalk(line):
                         ctr +=1
-                except:
+                except Exception as e:
                     print(f"Error on line {linectr}: {e}")
                 linectr += 1
     except Exception as e:
