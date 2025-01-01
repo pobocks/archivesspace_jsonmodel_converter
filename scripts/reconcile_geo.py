@@ -6,6 +6,8 @@ import os
 import argparse
 import csv
 from archivesspace_jsonmodel_converter.crosswalker import  Crosswalk
+from archivesspace_jsonmodel_converter.logger import get_logger
+
 HEADERS = ['creatorplace', 'id', 'geoplace']
 xw = None
 log = None
@@ -49,6 +51,7 @@ if __name__ == "__main__":
                 },
                 'working_directory':  args.wd
             }
+    log = get_logger()
     xw = Crosswalk(config)
     xw.create_crosswalk() 
     places = []
