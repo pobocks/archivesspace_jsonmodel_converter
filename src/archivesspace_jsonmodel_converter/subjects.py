@@ -101,6 +101,10 @@ def walk_db(tablename, firstfield, source, select, cur):
         if orig_val is None:
             log.warn(f"Original ID {orig_id} in {tablename} has 'None' as a value!")
             break
+        if tablename == 'tblCreatorPlaces':
+            # we don't try to create a Subject for this at this point;
+            xw.add_or_update(tablename, orig_id, orig_val, '')
+            continue
         try:
             subject = create_subject_json(orig_val, firstfield, source)
             aid = xw.get_aspace_id(tablename, orig_id)
