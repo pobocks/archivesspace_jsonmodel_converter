@@ -19,13 +19,7 @@ from .utils import get_real_name_from_xwalk, get_agent_uri
 
 FETCH_SUFFIX = "orig_id = value and misc in ('P','F', 'C') order by orig_id"
 
-NAME_QUERY= 'SELECT DISTINCT creator  from "tblcreator/place" ORDER_BY creator ASC'
-PARENS_GROUP = r'\((.*?)\)'  # used in findall, so not compiled
-ET_AL_PAT = re.compile(r"et?(\.) al?(\.)|\swith\s|(\s|\,)eds?(\.|$|\s)+", re.IGNORECASE)
-ED_PAT = re.compile(r"(\s|\,)eds?(\.|$|\s)+", re.IGNORECASE)
-JR_PAT = re.compile(r'jr\.?$', re.IGNORECASE)
-END_COMMA = re.compile(r',$')
-LINE_TAB_PAT = re.compile(r'\\n|\\t')
+
 client = None
 xw = None
 log = None
