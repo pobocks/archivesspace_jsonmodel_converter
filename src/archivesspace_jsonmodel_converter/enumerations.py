@@ -24,7 +24,8 @@ def add_to_crosswalk(line):
     added = False
     if line["enum"].startswith('**'):
        # some values have been marked with '***' to indicate that they've been looked at, but determination of the associated enum is pending
-        log.warn(f"Type {line['type']} Value{line['val']} ( {line['valid']}) is pending but added to crosswalk")
+        log.warn(f"Type {line['type']} [{line['val']}] ( {line['valid']}) is pending")
+        return None
     added = xw.add_or_update('Enums', line["valid"], line["val"], line["enum"])
     return added
 

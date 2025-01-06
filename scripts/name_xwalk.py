@@ -49,6 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("filename", help="Path to input csv")
     parser.add_argument("-xwalk", default="crosswalk",help="Name of crosswalk db; default 'crosswalk'")
     parser.add_argument("-wd", default=".", help="Crosswalk working directory; default '.'")
+    parser.add_argument("-c", action="store_true", help="Clear Names in crosswalk")
     args = parser.parse_args()
     filepath = args.filename
     print(filepath)
@@ -69,8 +70,9 @@ if __name__ == "__main__":
     linectr = 0
     try:
         xw = Crosswalk(config)
-        xw.create_crosswalk()        
-        xw.delete_table(get_logger('crosswalk'), 'Names')
+        xw.create_crosswalk()
+        if args.c:        
+            xw.delete_table(get_logger('crosswalk'), 'Names')
         file_legit()
         with open(filepath, mode='r') as file: 
             # reading csv file
