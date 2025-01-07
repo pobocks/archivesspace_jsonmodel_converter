@@ -15,6 +15,12 @@ log = None
 # Static globals
 tablename = 'tblitems'
 resource_tablename = 'tblcolls'
+geo_tablename = 'tblGeoPlaces'
+item_geo = 'tblItemGeoPlaces'
+lcsh_tablename = 'tblLcshs'
+item_lcsh = 'tblItemLcshs'
+genre_tablename = 'tblLookupValues'
+names_xwalk_tablename = 'Names'
 dept_id = 48
 
 # Each AO needs:
@@ -74,7 +80,7 @@ def process_note(itemid, note):
 
 def get_subjects(itemid, genreid):
     subjects = []
-    tables = {'tblitemlcshs': 'tblLcshs', 'tblitemgeoplaces': 'tblGeoPlaces' , 'tblcreator/place': 'tblCreatorPlaces'}    
+    tables = {'tblitemlcshs': 'tblLcshs', 'tblitemgeoplaces': 'tblGeoPlaces' }    
     if genreid:
         aid = xw.get_aspace_id('tblLookupValues', genreid)
         if aid is not None:
@@ -85,10 +91,7 @@ def get_subjects(itemid, genreid):
                 f'''SELECT *
                     FROM "{tablename}"
                     WHERE itemid=\'{itemid}\''''):
-                if tablename == 'tblcreator/place':
-                    orig_id = row[4]
-                else:
-                    orig_id = row[1]
+                orig_id = row[1]
                 if orig_id:
                     aid = xw.get_aspace_id(tables[tablename], orig_id)
                     if not aid:
