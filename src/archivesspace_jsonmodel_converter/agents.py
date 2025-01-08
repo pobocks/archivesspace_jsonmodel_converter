@@ -209,17 +209,17 @@ def process_agents():
             agent_uri = get_agent_uri(xw, name, log)
             if agent_uri is not None:
                 # further processing not needed!
-                log.debug(f"Have agent id for '{row['orig_id']}'")
+                log.info(f"Have agent id for '{row['orig_id']}'")
                 continue
             json = create_agent_json(name, type)
-            log.debug(f"Json for type {type} '{name}', {json['jsonmodel_type']}")
+#            log.debug(f"Json for type {type} '{name}', {json['jsonmodel_type']}")
             if json:
                 if not report_only:
                     aspace_id = add_to_aspace(name, json)
                     if aspace_id is not None:
-                        xw.add_or_update('Creators', name, name, aspace_id )
+                        xw.add_or_update('agents', name, name, aspace_id )
                         ctr = ctr + 1
-                        log.info(f"Created: {aspace_id} \n with \n{json}")
+#                        log.info(f"Created: {aspace_id} \n with \n{json}")
             else:
                 errctr = errctr + 1
                 if errctr  > 4:
@@ -254,6 +254,7 @@ def agents_create(config, input_log, only_report):
     xw = config["d"]["crosswalk"]
     xw.create_crosswalk()
     problem_output_filepath =  config["agents_config"]["problem_filepath"]
+    log.info(f"Creating agents.  Report only? {report_only}")
     process_agents()
     if len(problem_list) > 0:
         write_problems_file(problem_output_filepath)
