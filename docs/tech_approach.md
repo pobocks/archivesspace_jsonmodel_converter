@@ -52,9 +52,9 @@ Three Access tables are processed to be converted into ArchivesSpace subjects: *
 
 Creators and itemNames do not have their own table in the Access database.  We are using the **tblcreator/place**, **tblItemNamesCorp**, and **tblItemNamesPers** tables, filtering by looking up the item_id in the **tblItems** crosswalk table.
 
-Because the creator and agent names were entered free-hand, a lot of typos, duplicate-but-not-quite names, etc. entered into the system.  An archivist reviewed all the names and created a CSV (Comma Separated Values) file, with three columns: **original**, **convert**, and **misc** (which has one of three values: 'P' (person), 'C' (company), or 'F' (family) ) . 
+Because the creator and agent names were entered free-hand, a lot of typos, duplicate-but-not-quite names, etc. entered into the system.  An archivist reviewed all the names and created a CSV (Comma Separated Values) file, **ORIG_ID**, **VALUE**, and **MISC** (which has one of three values: 'P' (person), 'C' (company), or 'F' (family) ) . 
 
-[name_xwalk.py](../src/archivesspace_jsonmodel_converter/name_xwalk.py) processes this file; if the **convert** column is empty, it assigns the value in the **original** column.  This process populates the 'Names' entries in Crosswalk, where, _orig_id_ is where the name as found in the Access table is placed,  _value_ contains the converted name, and _misc_ determines what kind of ArchivesSpace agent is created
+[name_xwalk.py](../src/archivesspace_jsonmodel_converter/name_xwalk.py) processes this file; if the **VALUE** column is empty, it assigns the value in the **ORIG_ID** column.  This process populates the 'Names' entries in Crosswalk, where, _orig_id_ is where the name as found in the Access table is placed,  _value_ contains the converted name, and _misc_ determines what kind of ArchivesSpace agent is created
 
 This script must be run before [agents.py](../src/archivesspace_jsonmodel_converter/agents.py)
 
