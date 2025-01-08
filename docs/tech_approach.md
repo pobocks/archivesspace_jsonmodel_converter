@@ -25,7 +25,7 @@ Currently this database contains only the **Crosswalk** table:
 |  Column | Data Type | comment |
 | :--------- | :---------- | :---------- |
 | id | integer | |
-| orig_table | text | 'enums' for enumerator, 'Names' for the Creator crosswalk; 'Creators' for data from the Creator/places table; otherwise the Access table name |
+| orig_table | text | 'enums' for enumerator, 'Names' for the Creator and itemNames crosswalk; 'agent' for data from the Creator/places and itemNames* table; otherwise the Access table name |
 | orig_id | text | the ID in the originating table * |
 | value | text | the text value in the originating table * |
 | aspace_id | text | for enumerators, the enum value; otherwise the full ArchivesSpace URL* |
@@ -33,9 +33,9 @@ Currently this database contains only the **Crosswalk** table:
 
 All interactions with the database are managed by the  **Crosswalk** class defined in [crosswalk.py](../src/archivesspace_jsonmodel_converter/crosswalker.py)
 
-### * Special Handling for 'Names' and 'Creators'
+### * Special Handling for 'Names' and 'agents'
 
-While the same Crosswalk table is used for the 'Names' and 'Creator' tables, the columns are repurposed as described below.
+While the same Crosswalk table is used for the 'Names' and 'agents' tables, the columns are repurposed as described below.
 
 ## Individual Conversions
 
@@ -50,17 +50,17 @@ Three Access tables are processed to be converted into ArchivesSpace subjects: *
 
 ### Agents
 
-Creators do not have their own table in the Access database.  We are using the **tblcreator/place** table, filtering by looking up the item_id in **tblItems**, then looking for _dept_code_id == 48_.
+Creators and itemNames do not have their own table in the Access database.  We are using the **tblcreator/place**, **tblItemNamesCorp**, and **tblItemNamesPers** tables, filtering by looking up the item_id in the **tblItems** crosswalk table.
 
-Because the creator names were entered free-hand, a lot of typos, duplicate-but-not-quite names, etc. entered into the system.  An archivist reviewed all the names and created a CSV (Comma Separated Values) file, with two columns: **original** and **convert** . 
+Because the creator and agent names were entered free-hand, a lot of typos, duplicate-but-not-quite names, etc. entered into the system.  An archivist reviewed all the names and created a CSV (Comma Separated Values) file, with three columns: **original**, **convert**, and **misc** (which has one of three values: 'P' (person), 'C' (company), or 'F' (family) ) . 
 
-[name_xwalk.py](../src/archivesspace_jsonmodel_converter/name_xwalk.py) processes this file; if the **convert** column is empty, it assigns the value in the **original** column.  This process populates the 'Names' entries in Crosswalk, where, _orig_id_ is where  the creator name as found in the Access table is placed, and _value_ contains the converted name.
+[name_xwalk.py](../src/archivesspace_jsonmodel_converter/name_xwalk.py) processes this file; if the **convert** column is empty, it assigns the value in the **original** column.  This process populates the 'Names' entries in Crosswalk, where, _orig_id_ is where the name as found in the Access table is placed,  _value_ contains the converted name, and _misc_ determines what kind of ArchivesSpace agent is created
 
 This script must be run before [agents.py](../src/archivesspace_jsonmodel_converter/agents.py)
 
-Determining whether the creator name to be processed falls into the category of _person_, _corporate_, or _family_ requires, among other things, checking the **enum** crosswalk with the _creator___type_, as well as checking the _creatortypeid.
+If more names are added, this script can be run again, followed by re-running [agents.py](../src/archivesspace_jsonmodel_converter/agents.py)
 
-The creator name is then found in the 'Names' entries to find the converted name.  When an agent is created in ArchivesSpace, a 'Creators' entry is created in Crosswalk, with _orig_id_ and _value_ containing the "converted" name, and _aspace_id containing the *PUI* URI.
+The agent name is then found in the 'Names' entries to find the converted name.  When an agent is created in ArchivesSpace, an entry is created in the 'agents' table in the Crosswalk, with _orig_id_ and _value_ containing the "converted" name, and _aspace_id containing the URI.
 
 
 ### Resources
