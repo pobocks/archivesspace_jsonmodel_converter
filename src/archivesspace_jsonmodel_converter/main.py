@@ -11,6 +11,7 @@ from .crosswalker import crosswalk_reinitialize
 from .crosswalker import crosswalk_delete_table
 
 from .agents import agents_create
+from .update_archival_objects import archival_objects_update
 
 
 CONFIG = None
@@ -108,18 +109,27 @@ def export_crosswalk_table(csv_file, xw_table):
     log.info(f"Exporting {xw_table} to {csv_file}")
     CONFIG.dynamic_configuration()
     crosswalk_export(CONFIG, log, csv_file, xw_table)
-
 main.add_command(export_crosswalk_table)
+
 @click.command()
-@click.option('--really-create', is_flag=True, show_default=True, default=False, help="Actually create Aspace records")
-def create_agents(really_create): 
-    report_only = not really_create
+@click.option('--report-only', is_flag=True, show_default=True, default=False, help="Don't create Aspace records")
+def create_agents(report_only): 
     log = get_logger('main.agents')
     log.info("Create Agents")
     CONFIG.dynamic_configuration()
     agents_create(CONFIG, log, report_only)
     
 main.add_command(create_agents)
+
+@click.command()
+@click.option('--report-only', is_flag=True, show_default=True, default=False, help="Don't update the archival objects")
+def update_archival_objects(report_only): 
+    log = get_logger('main.update')
+    log.info("Update archival objects")
+    CONFIG.dynamic_configuration()
+    archival_objects_update(CONFIG, log, report_only)
+    
+main.add_command(update_archival_objects)
 
 @click.command()
 @click.option('--xw-table', help="Name of a Crosswalk table")
