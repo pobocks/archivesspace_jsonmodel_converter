@@ -123,9 +123,9 @@ def add_to_aspace(name,  agent):
                 error = err['source'][0]
             else:
                 error = response
-            log.error(f"Error detected for {name}: {error}\n json is:\n{agent}")
+            log.error(f"Error detected for creating agent: {error}\n json is:\n{agent}", agent=name)
     else:
-        log.error(f"Item {name} not created for unknown reasons: {response}")
+        log.error(f"Agent not created for unknown reasons: {response}", agent=name)
     return aspace_id
 
 def create_agent_json(name,misc):
@@ -135,19 +135,19 @@ def create_agent_json(name,misc):
         if nmjson is not None:
             agent_json = create_person_json(nmjson)
         else:
-            log.error(f"Unable to correctly process {name} as a Person")
+            log.error(f"Unable to correctly process  as a Person", agent=name)
     elif misc == 'C':
         nmjson = create_corp_nm_json(name)
         if nmjson is not None:
             agent_json = create_corp_json(nmjson)
         else:
-            log.error(f"Unable to correctly process {name} as a Corporation")
+            log.error(f"Unable to correctly process as a Corporation", agent=name)
     else:
         nmjson = create_family_nm_json(name)
         if nmjson is not None:
             agent_json = create_family_json(nmjson)
         else:
-            log.error(f"Unable to correctly process {name} as a Family")
+            log.error(f"Unable to correctly process as a Family", agent=name)
     return agent_json
 
 
@@ -209,7 +209,7 @@ def process_agents():
             agent_uri = get_agent_uri(xw, name, log)
             if agent_uri is not None:
                 # further processing not needed!
-                log.info(f"Have agent id for '{row['orig_id']}'")
+                log.info("Have agent id already ", agent=name)
                 continue
             json = create_agent_json(name, type)
 #            log.debug(f"Json for type {type} '{name}', {json['jsonmodel_type']}")
