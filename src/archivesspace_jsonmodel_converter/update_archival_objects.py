@@ -112,14 +112,14 @@ def get_real_agent(agent_name):
       if mod_agent.find(',') == -1:
          parts = mod_agent.split(' ')
          mod_agent = parts[-1] + ", " + " ".join(parts[0:-1])
-         try:
-            real_agent = get_real_name_from_xwalk(xw, mod_agent, log)
-            if real_agent is not None:
-               log.warn(f"Using '{mod_agent}' for'{agent_name}': found'{real_agent}' ")
-         except Exception as e:
+         real_agent = get_real_name_from_xwalk(xw, mod_agent, log)
+         if real_agent is not None:
+            if real_agent not in using:
+               using.append(real_agent)
+               log.warn(f"Using inverted name",agent=agent_name, mod_agent=mod_agent, real_agent=real_agent)
+         else:
             log.error("Error getting real agent", agent=agent_name)
-            return None
-            
+            return None            
    return real_agent
 
 def matched_link(link, oldlink):
@@ -143,8 +143,8 @@ def process_agent(itemId, role, rel_id, agent_name, repository_note, linked):
       log.debug("Ignore", agent=agent_name)
       return repository_note, linked
    if real_agent is None:
-      log.debug("not in CrossWalk", itemId=itemId, agent=agent_name )
       if agent_name.strip() not in missing:
+         log.debug("not in CrossWalk", itemId=itemId, agent=agent_name )      
          missing.append(agent_name.strip())
       return repository_note, linked   
    agent_uri = get_agent_uri(xw, real_agent, log)
@@ -221,7 +221,7 @@ def process_items():
       ctr += 1
       item_uri = row['aspace_id']
       if item_uri is None:
-         log.debug("missing aspaceURI",itemId=itemId)
+         log.debug("missing item aspaceURI",itemId=itemId)
          continue
       item_json = get_json(item_uri)
       if item_json is None:
@@ -251,7 +251,7 @@ def process_items():
             log.error(f"Error updating {itemId}, error=err ")
 
 def archival_objects_update(config, input_log, only_report = True):
-   global client, xw, conn, log, missing, report_only, stage
+   global client, xw, conn, log, missing, using, report_only, stage
    stage = ""
    report_only = only_report
    log = input_log
@@ -261,5 +261,6 @@ def archival_objects_update(config, input_log, only_report = True):
    xw.create_crosswalk()
    conn = config["d"]["postgres"]
    missing = []
+   using = []
    log.info(f"Report only? {report_only}.")
    process_items()
