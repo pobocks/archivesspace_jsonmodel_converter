@@ -113,13 +113,9 @@ def get_real_agent(agent_name):
          parts = mod_agent.split(' ')
          mod_agent = parts[-1] + ", " + " ".join(parts[0:-1])
          real_agent = get_real_name_from_xwalk(xw, mod_agent, log)
-         if real_agent is not None:
-            if real_agent not in using:
-               using.append(real_agent)
-               log.warn(f"Using inverted name",agent=agent_name, mod_agent=mod_agent, real_agent=real_agent)
-         else:
-            log.error("Error getting real agent", agent=agent_name)
-            return None            
+         if real_agent is not None and real_agent not in using:
+            using.append(real_agent)
+            log.warn(f"Using inverted name",agent=agent_name, mod_agent=mod_agent, real_agent=real_agent)    
    return real_agent
 
 def matched_link(link, oldlink):
